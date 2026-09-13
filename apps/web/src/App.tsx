@@ -9,6 +9,30 @@ import {
   type SupplyChainEvent,
 } from "./services/api";
 
+// ---- Earthy palette ----
+const palette = {
+  bg: "#2A2115",          // deep soil brown (page background)
+  bgHeaderBorder: "#4A3826",
+  card: "#F6EFDE",        // warm cream paper (light cards)
+  cardText: "#2E2415",    // dark roasted-coffee text on cream
+  darkCard: "#33281B",    // lighter soil brown (dark cards/panels)
+  darkCardBorder: "#5C4A34",
+  inputBgOnCream: "#EFE4C9",
+  inputBgOnDark: "#241C12",
+  inputBorder: "#6B5842",
+  textCream: "#EEE3CC",   // primary light text on dark bg
+  textMuted: "#B8A888",   // muted tan/secondary text
+  green: "#4B6B3A",       // leaf green (primary accent / buttons)
+  greenBright: "#7FAE5A", // highlight green (selected state)
+  greenSoft: "#8BAE6F",
+  rust: "#A9552E",        // terracotta accent (timeline / secondary actions)
+  rustSoft: "#C97B4A",
+  errorBg: "#3A1F16",
+  errorText: "#E2A184",
+  successBg: "#28331C",
+  successText: "#9FC97D",
+};
+
 export const App: React.FC = () => {
   // Batch Form State
   const [batchId, setBatchId] = useState("");
@@ -79,7 +103,6 @@ export const App: React.FC = () => {
     }
   }, [role]);
 
-  // Insert the URL auto-select hook here:
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const qBatchId = params.get("batchId");
@@ -150,12 +173,12 @@ export const App: React.FC = () => {
     : "";
 
   return (
-    <div style={{ backgroundColor: "#121418", color: "#e2e8f0", minHeight: "100vh", fontFamily: "sans-serif", padding: "2rem" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #2d3748", paddingBottom: "1rem", maxWidth: "1100px", margin: "0 auto 2rem auto" }}>
-        <h2 style={{ margin: 0 }}>🌾 Agri-Traceability Dashboard</h2>
+    <div style={{ backgroundColor: palette.bg, color: palette.textCream, minHeight: "100vh", fontFamily: "'Georgia', 'Source Serif 4', serif", padding: "2rem" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `2px solid ${palette.bgHeaderBorder}`, paddingBottom: "1rem", maxWidth: "1100px", margin: "0 auto 2rem auto" }}>
+        <h2 style={{ margin: 0, color: palette.textCream, letterSpacing: "0.02em" }}>🌾 Agri-Traceability Dashboard</h2>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <label style={{ fontSize: "0.9rem" }}>Active Role:</label>
-          <select value={role} onChange={(e: any) => setRole(e.target.value)} style={{ padding: "0.4rem 0.8rem", borderRadius: "4px", backgroundColor: "#2d3748", color: "#68d391", fontWeight: "bold", border: "1px solid #4a5568", cursor: "pointer" }}>
+          <label style={{ fontSize: "0.9rem", fontFamily: "sans-serif", color: palette.textMuted }}>Active Role:</label>
+          <select value={role} onChange={(e: any) => setRole(e.target.value)} style={{ padding: "0.4rem 0.8rem", borderRadius: "4px", backgroundColor: palette.darkCard, color: palette.greenBright, fontWeight: "bold", border: `1px solid ${palette.darkCardBorder}`, cursor: "pointer", fontFamily: "sans-serif" }}>
             <option value="Farmer">Farmer</option>
             <option value="Distributor">Distributor / Logistics</option>
             <option value="Retailer">Retailer</option>
@@ -164,41 +187,41 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
-        {error && <div style={{ backgroundColor: "#fff5f5", color: "#e53e3e", padding: "0.75rem", borderRadius: "6px", marginBottom: "1.5rem" }}>{error}</div>}
-        {successMsg && <div style={{ backgroundColor: "#f0fff4", color: "#38a169", padding: "0.75rem", borderRadius: "6px", marginBottom: "1.5rem" }}>{successMsg}</div>}
+      <div style={{ maxWidth: "1100px", margin: "0 auto", fontFamily: "sans-serif" }}>
+        {error && <div style={{ backgroundColor: palette.errorBg, color: palette.errorText, padding: "0.75rem", borderRadius: "6px", marginBottom: "1.5rem", border: `1px solid ${palette.rust}` }}>{error}</div>}
+        {successMsg && <div style={{ backgroundColor: palette.successBg, color: palette.successText, padding: "0.75rem", borderRadius: "6px", marginBottom: "1.5rem", border: `1px solid ${palette.green}` }}>{successMsg}</div>}
 
         <div style={{ display: "grid", gridTemplateColumns: role === "Consumer" ? "1fr" : "1fr 1fr", gap: "2rem" }}>
-          
+
           {/* Action Column */}
           {role !== "Consumer" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               {role === "Farmer" && (
-                <div style={{ backgroundColor: "#ffffff", color: "#1a202c", padding: "1.5rem", borderRadius: "8px" }}>
-                  <h3 style={{ marginTop: 0, color: "#2d3748" }}>Register Batch (Farmer)</h3>
+                <div style={{ backgroundColor: palette.card, color: palette.cardText, padding: "1.5rem", borderRadius: "10px", boxShadow: "0 4px 14px rgba(0,0,0,0.25)" }}>
+                  <h3 style={{ marginTop: 0, color: palette.cardText, fontFamily: "'Georgia', serif" }}>Register Batch (Farmer)</h3>
                   <form onSubmit={handleRegisterBatch} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     <input type="text" placeholder="Batch ID (e.g. MANGO-2026-0002)" value={batchId} onChange={(e) => setBatchId(e.target.value)} style={inputStyle} />
                     <input type="text" placeholder="Product Name (e.g. Mango)" value={productName} onChange={(e) => setProductName(e.target.value)} style={inputStyle} />
                     <input type="text" placeholder="Variety (e.g. Alphonso)" value={variety} onChange={(e) => setVariety(e.target.value)} style={inputStyle} />
                     <input type="text" placeholder="Farm Name" value={farmName} onChange={(e) => setFarmName(e.target.value)} style={inputStyle} />
                     <input type="text" placeholder="Origin Location" value={originLocation} onChange={(e) => setOriginLocation(e.target.value)} style={inputStyle} />
-                    <button type="submit" disabled={submitting} style={{ backgroundColor: "#276749", color: "#fff", padding: "0.75rem", border: "none", borderRadius: "4px", fontWeight: "bold", cursor: "pointer" }}>
+                    <button type="submit" disabled={submitting} style={{ backgroundColor: palette.green, color: "#fff", padding: "0.8rem", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem", letterSpacing: "0.01em" }}>
                       {submitting ? "Mining Block..." : "Register Batch On-Chain"}
                     </button>
                   </form>
                 </div>
               )}
 
-              <div style={{ backgroundColor: "#1a202c", border: "1px solid #4a5568", padding: "1.5rem", borderRadius: "8px" }}>
-                <h3 style={{ marginTop: 0, color: "#68d391" }}>
+              <div style={{ backgroundColor: palette.darkCard, border: `1px solid ${palette.darkCardBorder}`, padding: "1.5rem", borderRadius: "10px" }}>
+                <h3 style={{ marginTop: 0, color: palette.greenBright }}>
                   {selectedBatchId ? `Log Event: ${selectedBatchId}` : "Select a Batch to Log Event"}
                 </h3>
                 {selectedBatchId ? (
                   <form onSubmit={handleAddEvent} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     <input type="text" placeholder="Location (e.g. Mumbai Port, Store #14)" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} style={darkInputStyle} />
-                    
+
                     <div>
-                      <label style={{ fontSize: "0.8rem", color: "#a0aec0", display: "block", marginBottom: "0.25rem" }}>Allowed Status ({role}):</label>
+                      <label style={{ fontSize: "0.8rem", color: palette.textMuted, display: "block", marginBottom: "0.25rem" }}>Allowed Status ({role}):</label>
                       <select value={eventStatus} onChange={(e) => setEventStatus(e.target.value)} style={darkInputStyle}>
                         {getAvailableStatuses().map((st) => (
                           <option key={st} value={st}>{st}</option>
@@ -207,12 +230,12 @@ export const App: React.FC = () => {
                     </div>
 
                     <input type="text" placeholder="Notes / Sensor Data" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} style={darkInputStyle} />
-                    <button type="submit" disabled={submitting} style={{ backgroundColor: "#3182ce", color: "#fff", padding: "0.75rem", border: "none", borderRadius: "4px", fontWeight: "bold", cursor: "pointer" }}>
+                    <button type="submit" disabled={submitting} style={{ backgroundColor: palette.rust, color: "#fff", padding: "0.8rem", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem" }}>
                       {submitting ? "Mining Event..." : `Log ${role} Event`}
                     </button>
                   </form>
                 ) : (
-                  <p style={{ color: "#a0aec0", fontSize: "0.9rem" }}>Select any batch from the list on the right to log an update for this role.</p>
+                  <p style={{ color: palette.textMuted, fontSize: "0.9rem" }}>Select any batch from the list on the right to log an update for this role.</p>
                 )}
               </div>
             </div>
@@ -220,9 +243,9 @@ export const App: React.FC = () => {
 
           {/* Verification & Display Column */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            
+
             {role === "Consumer" && (
-              <div style={{ backgroundColor: "#2b6cb0", color: "#fff", padding: "1rem", borderRadius: "6px" }}>
+              <div style={{ backgroundColor: palette.green, color: "#fff", padding: "1rem", borderRadius: "8px" }}>
                 <h4 style={{ margin: "0 0 0.5rem 0" }}>🔍 Consumer Verification View</h4>
                 <p style={{ margin: 0, fontSize: "0.9rem" }}>
                   Scan product QR code or select a batch to inspect its immutable provenance timeline.
@@ -232,11 +255,11 @@ export const App: React.FC = () => {
 
             {/* Batch List */}
             <div>
-              <h3 style={{ marginTop: 0 }}>Registered Batches</h3>
+              <h3 style={{ marginTop: 0, color: palette.textCream }}>Registered Batches</h3>
               {loading ? (
-                <p style={{ color: "#a0aec0" }}>Loading smart contract state...</p>
+                <p style={{ color: palette.textMuted }}>Loading smart contract state...</p>
               ) : batches.length === 0 ? (
-                <p style={{ color: "#a0aec0" }}>No batches created yet.</p>
+                <p style={{ color: palette.textMuted }}>No batches created yet.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   {batches.map((b) => (
@@ -244,15 +267,16 @@ export const App: React.FC = () => {
                       key={b.batchId}
                       onClick={() => handleSelectBatch(b.batchId)}
                       style={{
-                        backgroundColor: selectedBatchId === b.batchId ? "#2d3748" : "#1a202c",
-                        border: selectedBatchId === b.batchId ? "2px solid #68d391" : "1px solid #2d3748",
+                        backgroundColor: selectedBatchId === b.batchId ? "#3B2F1F" : palette.darkCard,
+                        border: selectedBatchId === b.batchId ? `2px solid ${palette.greenBright}` : `1px solid ${palette.darkCardBorder}`,
                         padding: "1rem",
-                        borderRadius: "6px",
+                        borderRadius: "8px",
                         cursor: "pointer",
+                        transition: "border-color 0.2s",
                       }}
                     >
-                      <h4 style={{ margin: "0 0 0.25rem 0", color: "#68d391" }}>{b.batchId}</h4>
-                      <p style={{ margin: 0, fontSize: "0.9rem" }}>{b.cropName} — {b.farmOrigin}</p>
+                      <h4 style={{ margin: "0 0 0.25rem 0", color: palette.greenBright }}>{b.batchId}</h4>
+                      <p style={{ margin: 0, fontSize: "0.9rem", color: palette.textCream }}>{b.cropName} — {b.farmOrigin}</p>
                     </div>
                   ))}
                 </div>
@@ -261,36 +285,36 @@ export const App: React.FC = () => {
 
             {/* Selected Batch: Event Timeline & QR Code */}
             {selectedBatchId && (
-              <div style={{ backgroundColor: "#1a202c", padding: "1.25rem", borderRadius: "6px", border: "1px solid #2d3748" }}>
-                
+              <div style={{ backgroundColor: palette.darkCard, padding: "1.25rem", borderRadius: "8px", border: `1px solid ${palette.darkCardBorder}` }}>
+
                 {/* QR Code Verification Card */}
-                <div style={{ backgroundColor: "#ffffff", color: "#1a202c", padding: "1rem", borderRadius: "6px", display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.25rem" }}>
+                <div style={{ backgroundColor: palette.card, color: palette.cardText, padding: "1rem", borderRadius: "8px", display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.25rem" }}>
                   <QRCodeSVG value={currentVerificationUrl} size={110} level="M" />
                   <div>
-                    <h4 style={{ margin: "0 0 0.25rem 0", color: "#2d3748" }}>Consumer QR Tag</h4>
-                    <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.8rem", color: "#718096" }}>
+                    <h4 style={{ margin: "0 0 0.25rem 0", color: palette.cardText }}>Consumer QR Tag</h4>
+                    <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.8rem", color: "#6B5842" }}>
                       Scan code to verify origin and complete block history on mobile.
                     </p>
-                    <code style={{ fontSize: "0.75rem", backgroundColor: "#edf2f7", padding: "0.2rem 0.4rem", borderRadius: "4px", color: "#2b6cb0", wordBreak: "break-all" }}>
+                    <code style={{ fontSize: "0.75rem", backgroundColor: palette.inputBgOnCream, padding: "0.2rem 0.4rem", borderRadius: "4px", color: palette.rust, wordBreak: "break-all" }}>
                       {currentVerificationUrl}
                     </code>
                   </div>
                 </div>
 
                 {/* Timeline */}
-                <h4 style={{ marginTop: 0, borderBottom: "1px solid #2d3748", paddingBottom: "0.5rem" }}>
+                <h4 style={{ marginTop: 0, borderBottom: `1px solid ${palette.darkCardBorder}`, paddingBottom: "0.5rem", color: palette.textCream }}>
                   On-Chain Timeline: {selectedBatchId}
                 </h4>
                 {selectedEvents.length === 0 ? (
-                  <p style={{ color: "#a0aec0", fontSize: "0.9rem" }}>No supply chain events logged yet.</p>
+                  <p style={{ color: palette.textMuted, fontSize: "0.9rem" }}>No supply chain events logged yet.</p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     {selectedEvents.map((evt, idx) => (
-                      <div key={idx} style={{ borderLeft: "2px solid #3182ce", paddingLeft: "0.75rem" }}>
-                        <p style={{ margin: 0, fontWeight: "bold", color: "#63b3ed", fontSize: "0.9rem" }}>{evt.status}</p>
-                        <p style={{ margin: "0.2rem 0", fontSize: "0.85rem" }}>📍 {evt.location}</p>
-                        <p style={{ margin: 0, fontSize: "0.8rem", color: "#a0aec0" }}>📝 {evt.notes}</p>
-                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.7rem", color: "#718096" }}>
+                      <div key={idx} style={{ borderLeft: `2px solid ${palette.rustSoft}`, paddingLeft: "0.75rem" }}>
+                        <p style={{ margin: 0, fontWeight: "bold", color: palette.greenSoft, fontSize: "0.9rem" }}>{evt.status}</p>
+                        <p style={{ margin: "0.2rem 0", fontSize: "0.85rem", color: palette.textCream }}>📍 {evt.location}</p>
+                        <p style={{ margin: 0, fontSize: "0.8rem", color: palette.textMuted }}>📝 {evt.notes}</p>
+                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.7rem", color: "#8A7355" }}>
                           Actor: {evt.actor ? `${evt.actor.substring(0, 6)}...${evt.actor.substring(evt.actor.length - 4)}` : "Verified Contract"}
                         </p>
                       </div>
@@ -307,7 +331,7 @@ export const App: React.FC = () => {
   );
 };
 
-const inputStyle: React.CSSProperties = { width: "100%", padding: "0.6rem", borderRadius: "4px", border: "1px solid #cbd5e0", backgroundColor: "#2d3748", color: "#fff", boxSizing: "border-box" };
-const darkInputStyle: React.CSSProperties = { width: "100%", padding: "0.6rem", borderRadius: "4px", border: "1px solid #4a5568", backgroundColor: "#1a202c", color: "#fff", boxSizing: "border-box" };
+const inputStyle: React.CSSProperties = { width: "100%", padding: "0.65rem", borderRadius: "5px", border: "1px solid #C9B896", backgroundColor: "#EFE4C9", color: "#2E2415", boxSizing: "border-box", fontFamily: "sans-serif" };
+const darkInputStyle: React.CSSProperties = { width: "100%", padding: "0.65rem", borderRadius: "5px", border: "1px solid #6B5842", backgroundColor: "#241C12", color: "#EEE3CC", boxSizing: "border-box", fontFamily: "sans-serif" };
 
 export default App;
