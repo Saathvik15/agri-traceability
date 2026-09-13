@@ -84,10 +84,6 @@ const GlobalStyle = () => (
       60%  { transform: scale(1.25); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
     }
-    @keyframes tagSwing {
-      0%, 100% { transform: rotate(-1.4deg); }
-      50%      { transform: rotate(1.4deg); }
-    }
     @keyframes shimmerSeal {
       0%   { background-position: -120px 0; }
       100% { background-position: 220px 0; }
@@ -112,15 +108,15 @@ const GlobalStyle = () => (
     .at-backdrop-photo {
       position: fixed; inset: 0; z-index: -3; pointer-events: none;
       background-image: url('https://images.unsplash.com/photo-1757338409748-35a566416113?fm=jpg&q=70&w=2400&auto=format&fit=crop');
-      background-size: cover; background-position: center; filter: saturate(0.9);
+      background-size: cover; background-position: center; filter: saturate(0.75) brightness(0.92);
     }
     .at-backdrop-scrim {
       position: fixed; inset: 0; z-index: -2; pointer-events: none;
       background:
-        radial-gradient(ellipse 900px 640px at 12% -8%, rgba(107,74,49,0.32) 0%, rgba(107,74,49,0) 60%),
-        radial-gradient(ellipse 800px 620px at 108% 18%, rgba(51,88,76,0.34) 0%, rgba(51,88,76,0) 62%),
-        radial-gradient(ellipse 900px 700px at 90% 108%, rgba(166,93,52,0.28) 0%, rgba(166,93,52,0) 60%),
-        radial-gradient(ellipse 700px 560px at 6% 96%, rgba(201,162,39,0.14) 0%, rgba(201,162,39,0) 65%),
+        radial-gradient(ellipse 900px 640px at 12% -8%, rgba(74,53,36,0.36) 0%, rgba(74,53,36,0) 60%),
+        radial-gradient(ellipse 800px 620px at 108% 18%, rgba(51,88,76,0.30) 0%, rgba(51,88,76,0) 62%),
+        radial-gradient(ellipse 900px 700px at 90% 108%, rgba(107,74,49,0.34) 0%, rgba(107,74,49,0) 62%),
+        radial-gradient(ellipse 800px 620px at 4% 100%, rgba(42,30,20,0.4) 0%, rgba(42,30,20,0) 65%),
         linear-gradient(160deg, rgba(22,36,28,0.93) 0%, rgba(22,36,28,0.88) 38%, rgba(27,20,13,0.94) 100%);
     }
     .at-grain {
@@ -135,7 +131,7 @@ const GlobalStyle = () => (
     .at-ember-glow {
       position: fixed; bottom: -18%; right: -8%; width: 900px; height: 620px;
       pointer-events: none; z-index: 0;
-      background: radial-gradient(ellipse at center, rgba(166,93,52,0.16) 0%, rgba(166,93,52,0) 68%);
+      background: radial-gradient(ellipse at center, rgba(107,74,49,0.18) 0%, rgba(107,74,49,0) 68%);
     }
 
     .at-in       { animation: riseIn 0.6s cubic-bezier(0.16,1,0.3,1) both; }
@@ -196,10 +192,6 @@ const GlobalStyle = () => (
       border: 1.5px dashed currentColor;
     }
 
-    .at-tag-hang {
-      animation: tagSwing 5s ease-in-out infinite;
-      transform-origin: top center;
-    }
 
     .at-vine {
       position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px;
@@ -433,7 +425,7 @@ export const App: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
           <SprigIcon />
           <h1 style={{ margin: 0, color: palette.cream, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.5rem", letterSpacing: "0.005em" }}>
-            Agri-Traceability Ledger
+            Harvest Trail
           </h1>
         </div>
 
@@ -630,25 +622,24 @@ export const App: React.FC = () => {
             {selectedBatchId && (
               <div key={selectedBatchId} className="at-fade" style={{ backgroundColor: palette.panel, padding: "1.5rem", borderRadius: "16px 6px 16px 6px", border: `1px solid ${palette.panelBorder}`, borderTop: `3px solid ${palette.sienna}` }}>
 
-                {/* QR Code Verification Card — shipping tag styling, contained (not full width) */}
+                {/* QR Code Verification Card — a static tag, stacked and centered */}
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
                   <div
-                    className="at-tag-hang"
                     style={{
-                      backgroundColor: palette.paper, color: palette.paperText, padding: "1.15rem 1.3rem",
-                      borderRadius: "10px", display: "flex", alignItems: "center", gap: "1.1rem",
-                      width: "fit-content", maxWidth: "380px",
-                      backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(74,53,36,0.08) 8px, rgba(74,53,36,0.08) 9px)",
-                      backgroundSize: "100% 2px", backgroundRepeat: "no-repeat", backgroundPosition: "0 0",
+                      backgroundColor: palette.paper, color: palette.paperText, padding: "1.3rem 1.4rem",
+                      borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center",
+                      textAlign: "center", gap: "0.9rem",
+                      width: "fit-content", maxWidth: "300px",
                       boxShadow: "0 12px 26px rgba(42,30,20,0.4)",
                       border: `1px solid ${palette.tan}`,
                     }}
                   >
-                    <QRCodeSVG value={currentVerificationUrl} size={100} level="M" fgColor={palette.siennaDeep} style={{ flexShrink: 0 }} />
-                    <div style={{ minWidth: 0 }}>
-                      <h4 style={{ margin: "0 0 0.3rem 0", color: palette.paperText, fontFamily: "'Fraunces', serif", fontSize: "1rem" }}>
-                        Consumer tag
-                      </h4>
+                    <h4 style={{ margin: 0, color: palette.paperText, fontFamily: "'Fraunces', serif", fontSize: "1rem" }}>
+                      Consumer tag
+                    </h4>
+                    <QRCodeSVG value={currentVerificationUrl} size={112} level="M" fgColor={palette.siennaDeep} style={{ flexShrink: 0 }} />
+                    <div style={{ width: "70%", borderTop: `1px dashed ${palette.paperMuted}66` }} />
+                    <div>
                       <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.78rem", color: palette.paperMuted, lineHeight: 1.5 }}>
                         Scan to open the origin story and full history.
                       </p>
