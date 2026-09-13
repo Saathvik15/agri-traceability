@@ -15,7 +15,7 @@ import {
 const HOME_BG_URL =
   "https://images.unsplash.com/photo-1635176490410-5116fc497d45?q=80&w=2400&auto=format&fit=crop";
 const DASHBOARD_BG_URL =
-  "https://images.unsplash.com/photo-1728134529714-887bb3b6d37b?q=80&w=2400&auto=format&fit=crop";
+  "https://images.unsplash.com/photo-1676020932354-a7657b020246?q=80&w=2400&auto=format&fit=crop";
 
 // ---- Earthy palette: soil, canopy, bark, clay, and a few accent minerals ----
 const palette = {
