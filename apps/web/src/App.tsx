@@ -9,7 +9,7 @@ import {
   type SupplyChainEvent,
 } from "./services/api";
 
-// ---- Earthy palette: soil, canopy, tag-paper, harvest clay ----
+// ---- Earthy palette: soil, canopy, bark, clay, and a few accent minerals ----
 const palette = {
   soilTop: "#16241C",       // deep canopy green (background gradient top)
   soilBottom: "#1B140D",    // dark tilled-soil brown (background gradient bottom)
@@ -27,16 +27,34 @@ const palette = {
   sage: "#6F8D5B",           // primary — moss/sage
   sageBright: "#A9C48C",
   sageDeep: "#3E5A34",
-  clay: "#BD7A45",           // terracotta — secondary
+  clay: "#BD7A45",           // secondary — terracotta
   clayDeep: "#8B5327",
   clayBright: "#E0A468",
-  gold: "#CDA35C",           // harvest gold — tertiary accent
+  gold: "#CDA35C",           // harvest gold accent
+  // brown family
+  bark: "#4A3524",           // deep bark brown
+  barkLight: "#6B4A31",      // warm walnut
+  sienna: "#A65D34",         // sienna/rust brown
+  siennaDeep: "#6E3B1F",
+  tan: "#D9B98A",            // pale tan highlight
+  espresso: "#2A1E14",       // near-black coffee brown, for depth
+  // a couple of minerals outside the green/brown range, kept muted to stay in-family
+  teal: "#33584C",           // deep teal-green (slate of the forest)
+  tealBright: "#7FA396",
+  ochre: "#C9A227",          // warm mustard/ochre
   errorBg: "#331D14",
   errorBorder: "#8B4A2C",
   errorText: "#E3A47E",
   successBg: "#1E2E1D",
   successBorder: "#5B7A4F",
   successText: "#B7CE9E",
+};
+
+const ROLE_ACCENT: Record<string, { base: string; deep: string }> = {
+  Farmer: { base: palette.sage, deep: palette.sageDeep },
+  Distributor: { base: palette.sienna, deep: palette.siennaDeep },
+  Retailer: { base: palette.ochre, deep: palette.clayDeep },
+  Consumer: { base: palette.teal, deep: "#1E322B" },
 };
 
 const GlobalStyle = () => (
@@ -92,23 +110,32 @@ const GlobalStyle = () => (
 
     .at-root { position: relative; isolation: isolate; }
     .at-backdrop-photo {
-      position: fixed; inset: 0; z-index: -2; pointer-events: none;
+      position: fixed; inset: 0; z-index: -3; pointer-events: none;
       background-image: url('https://images.unsplash.com/photo-1757338409748-35a566416113?fm=jpg&q=70&w=2400&auto=format&fit=crop');
-      background-size: cover; background-position: center; filter: saturate(0.85);
+      background-size: cover; background-position: center; filter: saturate(0.9);
     }
     .at-backdrop-scrim {
-      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      position: fixed; inset: 0; z-index: -2; pointer-events: none;
       background:
-        linear-gradient(160deg, rgba(22,36,28,0.94) 0%, rgba(22,36,28,0.88) 40%, rgba(27,20,13,0.94) 100%);
+        radial-gradient(ellipse 900px 640px at 12% -8%, rgba(107,74,49,0.32) 0%, rgba(107,74,49,0) 60%),
+        radial-gradient(ellipse 800px 620px at 108% 18%, rgba(51,88,76,0.34) 0%, rgba(51,88,76,0) 62%),
+        radial-gradient(ellipse 900px 700px at 90% 108%, rgba(166,93,52,0.28) 0%, rgba(166,93,52,0) 60%),
+        radial-gradient(ellipse 700px 560px at 6% 96%, rgba(201,162,39,0.14) 0%, rgba(201,162,39,0) 65%),
+        linear-gradient(160deg, rgba(22,36,28,0.93) 0%, rgba(22,36,28,0.88) 38%, rgba(27,20,13,0.94) 100%);
     }
     .at-grain {
-      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      position: fixed; inset: 0; pointer-events: none; z-index: -1;
       opacity: 0.05; mix-blend-mode: overlay;
     }
     .at-canopy-glow {
       position: fixed; top: -20%; left: 50%; width: 1100px; height: 700px;
       transform: translateX(-50%); pointer-events: none; z-index: 0;
-      background: radial-gradient(ellipse at center, rgba(111,141,91,0.16) 0%, rgba(111,141,91,0) 70%);
+      background: radial-gradient(ellipse at center, rgba(111,141,91,0.14) 0%, rgba(111,141,91,0) 70%);
+    }
+    .at-ember-glow {
+      position: fixed; bottom: -18%; right: -8%; width: 900px; height: 620px;
+      pointer-events: none; z-index: 0;
+      background: radial-gradient(ellipse at center, rgba(166,93,52,0.16) 0%, rgba(166,93,52,0) 68%);
     }
 
     .at-in       { animation: riseIn 0.6s cubic-bezier(0.16,1,0.3,1) both; }
@@ -138,9 +165,8 @@ const GlobalStyle = () => (
     }
     .at-tab-pill {
       position: absolute; top: 4px; bottom: 4px; border-radius: 999px;
-      background: linear-gradient(135deg, #6F8D5B, #4E6B3F);
       box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-      transition: transform 0.32s cubic-bezier(0.16,1,0.3,1), width 0.32s cubic-bezier(0.16,1,0.3,1);
+      transition: transform 0.32s cubic-bezier(0.16,1,0.3,1), width 0.32s cubic-bezier(0.16,1,0.3,1), background 0.32s ease;
       animation: pillGlide 0.32s ease both;
     }
     .at-tab-btn {
@@ -177,13 +203,13 @@ const GlobalStyle = () => (
 
     .at-vine {
       position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px;
-      background: linear-gradient(180deg, #E0A468, #6F8D5B);
+      background: linear-gradient(180deg, #C9A227, #A65D34, #6F8D5B);
       transform-origin: top; animation: growVine 0.7s cubic-bezier(0.16,1,0.3,1) both;
       border-radius: 2px;
     }
     .at-node {
       position: absolute; left: 0; width: 12px; height: 12px; border-radius: 50%;
-      background: #E0A468; border: 2px solid #16241C;
+      background: #C9A227; border: 2px solid #16241C;
       animation: budPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
     }
 
@@ -393,6 +419,7 @@ export const App: React.FC = () => {
       <div className="at-backdrop-scrim" />
       <GrainOverlay />
       <div className="at-canopy-glow" />
+      <div className="at-ember-glow" />
 
       <header
         className="at-in"
@@ -413,7 +440,10 @@ export const App: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <span style={{ fontSize: "0.82rem", color: palette.textMuted }}>Viewing as</span>
           <div className="at-tab-track">
-            <div className="at-tab-pill" style={{ left: pillStyle.left, width: pillStyle.width }} />
+            <div
+              className="at-tab-pill"
+              style={{ left: pillStyle.left, width: pillStyle.width, background: `linear-gradient(135deg, ${ROLE_ACCENT[role].base}, ${ROLE_ACCENT[role].deep})` }}
+            />
             {LEAF_ROLES.map((r, i) => (
               <button
                 key={r}
@@ -490,9 +520,9 @@ export const App: React.FC = () => {
 
               <div
                 className="at-in at-in-2"
-                style={{ backgroundColor: palette.panel, border: `1px solid ${palette.panelBorder}`, padding: "1.85rem", borderRadius: "22px 6px 22px 6px" }}
+                style={{ backgroundColor: palette.panel, border: `1px solid ${palette.panelBorder}`, borderLeft: `3px solid ${ROLE_ACCENT[role].base}`, padding: "1.85rem", borderRadius: "22px 6px 22px 6px" }}
               >
-                <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: palette.sageBright, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.15rem" }}>
+                <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: ROLE_ACCENT[role].base, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.15rem" }}>
                   {selectedBatchId ? `Log an event for ${selectedBatchId}` : "Log a supply chain event"}
                 </h3>
                 {selectedBatchId ? (
@@ -513,7 +543,7 @@ export const App: React.FC = () => {
                     <input className="at-input" type="text" placeholder="Notes or sensor data" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} style={darkInputStyle} />
                     <button
                       type="submit" disabled={submitting} className="at-btn"
-                      style={{ backgroundColor: palette.clay, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem", marginTop: "0.35rem" }}
+                      style={{ backgroundColor: ROLE_ACCENT[role].base, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem", marginTop: "0.35rem" }}
                     >
                       {submitting ? "Sealing event…" : `Log ${ROLE_LABELS[role]} event`}
                     </button>
@@ -534,9 +564,10 @@ export const App: React.FC = () => {
               <div
                 className="at-in"
                 style={{
-                  background: `linear-gradient(135deg, ${palette.sage}, ${palette.sageDeep})`,
+                  background: `linear-gradient(135deg, ${palette.teal}, #1E322B)`,
                   color: "#fff", padding: "1.2rem 1.4rem", borderRadius: "12px",
                   display: "flex", alignItems: "center", gap: "0.9rem",
+                  border: `1px solid ${palette.tealBright}55`,
                 }}
               >
                 <span style={{ fontSize: "1.4rem" }}>🔍</span>
@@ -597,30 +628,34 @@ export const App: React.FC = () => {
 
             {/* Selected Batch: Event Timeline & QR Code */}
             {selectedBatchId && (
-              <div key={selectedBatchId} className="at-fade" style={{ backgroundColor: palette.panel, padding: "1.5rem", borderRadius: "16px 6px 16px 6px", border: `1px solid ${palette.panelBorder}` }}>
+              <div key={selectedBatchId} className="at-fade" style={{ backgroundColor: palette.panel, padding: "1.5rem", borderRadius: "16px 6px 16px 6px", border: `1px solid ${palette.panelBorder}`, borderTop: `3px solid ${palette.sienna}` }}>
 
-                {/* QR Code Verification Card — shipping tag styling */}
-                <div
-                  className="at-tag-hang"
-                  style={{
-                    backgroundColor: palette.paper, color: palette.paperText, padding: "1.15rem",
-                    borderRadius: "8px", display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.5rem",
-                    backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(0,0,0,0.05) 8px, rgba(0,0,0,0.05) 9px)",
-                    backgroundSize: "100% 2px", backgroundRepeat: "no-repeat", backgroundPosition: "0 0",
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  <QRCodeSVG value={currentVerificationUrl} size={104} level="M" fgColor={palette.clayDeep} />
-                  <div style={{ minWidth: 0 }}>
-                    <h4 style={{ margin: "0 0 0.3rem 0", color: palette.paperText, fontFamily: "'Fraunces', serif", fontSize: "1.02rem" }}>
-                      Consumer tag
-                    </h4>
-                    <p style={{ margin: "0 0 0.55rem 0", fontSize: "0.82rem", color: palette.paperMuted, lineHeight: 1.5 }}>
-                      Scan to open the full origin story and event history on any phone.
-                    </p>
-                    <code style={{ fontSize: "0.72rem", backgroundColor: palette.inputPaper, padding: "0.25rem 0.45rem", borderRadius: "4px", color: palette.clayDeep, wordBreak: "break-all", display: "inline-block" }}>
-                      {currentVerificationUrl}
-                    </code>
+                {/* QR Code Verification Card — shipping tag styling, contained (not full width) */}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
+                  <div
+                    className="at-tag-hang"
+                    style={{
+                      backgroundColor: palette.paper, color: palette.paperText, padding: "1.15rem 1.3rem",
+                      borderRadius: "10px", display: "flex", alignItems: "center", gap: "1.1rem",
+                      width: "fit-content", maxWidth: "380px",
+                      backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(74,53,36,0.08) 8px, rgba(74,53,36,0.08) 9px)",
+                      backgroundSize: "100% 2px", backgroundRepeat: "no-repeat", backgroundPosition: "0 0",
+                      boxShadow: "0 12px 26px rgba(42,30,20,0.4)",
+                      border: `1px solid ${palette.tan}`,
+                    }}
+                  >
+                    <QRCodeSVG value={currentVerificationUrl} size={100} level="M" fgColor={palette.siennaDeep} style={{ flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                      <h4 style={{ margin: "0 0 0.3rem 0", color: palette.paperText, fontFamily: "'Fraunces', serif", fontSize: "1rem" }}>
+                        Consumer tag
+                      </h4>
+                      <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.78rem", color: palette.paperMuted, lineHeight: 1.5 }}>
+                        Scan to open the origin story and full history.
+                      </p>
+                      <code style={{ fontSize: "0.68rem", backgroundColor: palette.inputPaper, padding: "0.22rem 0.4rem", borderRadius: "4px", color: palette.siennaDeep, wordBreak: "break-all", display: "inline-block" }}>
+                        {currentVerificationUrl}
+                      </code>
+                    </div>
                   </div>
                 </div>
 
