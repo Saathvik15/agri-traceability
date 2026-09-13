@@ -9,29 +9,60 @@ import {
   type SupplyChainEvent,
 } from "./services/api";
 
-// ---- Earthy palette ----
+// ---- Earthy palette (forest green / sage / terracotta) ----
 const palette = {
-  bg: "#2A2115",          // deep soil brown (page background)
-  bgHeaderBorder: "#4A3826",
-  card: "#F6EFDE",        // warm cream paper (light cards)
-  cardText: "#2E2415",    // dark roasted-coffee text on cream
-  darkCard: "#33281B",    // lighter soil brown (dark cards/panels)
-  darkCardBorder: "#5C4A34",
-  inputBgOnCream: "#EFE4C9",
-  inputBgOnDark: "#241C12",
-  inputBorder: "#6B5842",
-  textCream: "#EEE3CC",   // primary light text on dark bg
-  textMuted: "#B8A888",   // muted tan/secondary text
-  green: "#4B6B3A",       // leaf green (primary accent / buttons)
-  greenBright: "#7FAE5A", // highlight green (selected state)
-  greenSoft: "#8BAE6F",
-  rust: "#A9552E",        // terracotta accent (timeline / secondary actions)
-  rustSoft: "#C97B4A",
+  bg: "#182620",           // deep forest green-black
+  bgHeaderBorder: "#2F4A3D",
+  card: "#F5F1E4",         // warm cream
+  cardText: "#2E2A1F",
+  darkCard: "#20342A",     // forest green panel
+  darkCardBorder: "#3E5C4C",
+  inputBgOnCream: "#EDE6D2",
+  inputBgOnDark: "#182620",
+  inputBorder: "#4F6339",
+  textCream: "#EDE8D9",
+  textMuted: "#9CB39F",
+  green: "#4F6339",        // olive/sage — primary buttons
+  greenBright: "#A4B69A",  // soft sage highlight
+  greenSoft: "#8FAE7A",
+  rust: "#C18D52",         // warm terracotta/gold — secondary accent
+  rustSoft: "#D4A373",
   errorBg: "#3A1F16",
   errorText: "#E2A184",
-  successBg: "#28331C",
-  successText: "#9FC97D",
+  successBg: "#1F3324",
+  successText: "#A4B69A",
 };
+
+const GlobalStyle = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .at-fade-in { animation: fadeInUp 0.55s cubic-bezier(0.16,1,0.3,1) both; }
+    .at-fade-in-1 { animation-delay: 0.05s; }
+    .at-fade-in-2 { animation-delay: 0.12s; }
+    .at-fade-in-3 { animation-delay: 0.2s; }
+
+    .at-btn { transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.15s ease; }
+    .at-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.35); filter: brightness(1.06); }
+    .at-btn:active:not(:disabled) { transform: translateY(0px); }
+
+    .at-batch-card { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.2s ease; animation: fadeInUp 0.4s ease both; }
+    .at-batch-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(0,0,0,0.3); }
+
+    .at-input { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+    .at-input:focus { outline: none; border-color: #A4B69A !important; box-shadow: 0 0 0 3px rgba(164,182,154,0.25); }
+
+    .at-timeline-item { animation: fadeIn 0.5s ease both; }
+  `}</style>
+);
 
 export const App: React.FC = () => {
   // Batch Form State
@@ -173,12 +204,13 @@ export const App: React.FC = () => {
     : "";
 
   return (
-    <div style={{ backgroundColor: palette.bg, color: palette.textCream, minHeight: "100vh", fontFamily: "'Georgia', 'Source Serif 4', serif", padding: "2rem" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `2px solid ${palette.bgHeaderBorder}`, paddingBottom: "1rem", maxWidth: "1100px", margin: "0 auto 2rem auto" }}>
-        <h2 style={{ margin: 0, color: palette.textCream, letterSpacing: "0.02em" }}>🌾 Agri-Traceability Dashboard</h2>
+    <div style={{ backgroundColor: palette.bg, color: palette.textCream, minHeight: "100vh", fontFamily: "'Work Sans', sans-serif", padding: "2rem" }}>
+      <GlobalStyle />
+      <header className="at-fade-in" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `2px solid ${palette.bgHeaderBorder}`, paddingBottom: "1rem", maxWidth: "1100px", margin: "0 auto 2rem auto" }}>
+        <h2 style={{ margin: 0, color: palette.textCream, fontFamily: "'Fraunces', serif", fontWeight: 600, letterSpacing: "0.01em" }}>🌾 Agri-Traceability Dashboard</h2>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <label style={{ fontSize: "0.9rem", fontFamily: "sans-serif", color: palette.textMuted }}>Active Role:</label>
-          <select value={role} onChange={(e: any) => setRole(e.target.value)} style={{ padding: "0.4rem 0.8rem", borderRadius: "4px", backgroundColor: palette.darkCard, color: palette.greenBright, fontWeight: "bold", border: `1px solid ${palette.darkCardBorder}`, cursor: "pointer", fontFamily: "sans-serif" }}>
+          <label style={{ fontSize: "0.9rem", color: palette.textMuted }}>Active Role:</label>
+          <select value={role} onChange={(e: any) => setRole(e.target.value)} className="at-input" style={{ padding: "0.4rem 0.8rem", borderRadius: "6px", backgroundColor: palette.darkCard, color: palette.greenBright, fontWeight: 600, border: `1px solid ${palette.darkCardBorder}`, cursor: "pointer" }}>
             <option value="Farmer">Farmer</option>
             <option value="Distributor">Distributor / Logistics</option>
             <option value="Retailer">Retailer</option>
@@ -187,9 +219,9 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      <div style={{ maxWidth: "1100px", margin: "0 auto", fontFamily: "sans-serif" }}>
-        {error && <div style={{ backgroundColor: palette.errorBg, color: palette.errorText, padding: "0.75rem", borderRadius: "6px", marginBottom: "1.5rem", border: `1px solid ${palette.rust}` }}>{error}</div>}
-        {successMsg && <div style={{ backgroundColor: palette.successBg, color: palette.successText, padding: "0.75rem", borderRadius: "6px", marginBottom: "1.5rem", border: `1px solid ${palette.green}` }}>{successMsg}</div>}
+      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        {error && <div className="at-fade-in" style={{ backgroundColor: palette.errorBg, color: palette.errorText, padding: "0.75rem", borderRadius: "8px", marginBottom: "1.5rem", border: `1px solid ${palette.rust}` }}>{error}</div>}
+        {successMsg && <div className="at-fade-in" style={{ backgroundColor: palette.successBg, color: palette.successText, padding: "0.75rem", borderRadius: "8px", marginBottom: "1.5rem", border: `1px solid ${palette.green}` }}>{successMsg}</div>}
 
         <div style={{ display: "grid", gridTemplateColumns: role === "Consumer" ? "1fr" : "1fr 1fr", gap: "2rem" }}>
 
@@ -197,40 +229,40 @@ export const App: React.FC = () => {
           {role !== "Consumer" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               {role === "Farmer" && (
-                <div style={{ backgroundColor: palette.card, color: palette.cardText, padding: "1.5rem", borderRadius: "10px", boxShadow: "0 4px 14px rgba(0,0,0,0.25)" }}>
-                  <h3 style={{ marginTop: 0, color: palette.cardText, fontFamily: "'Georgia', serif" }}>Register Batch (Farmer)</h3>
+                <div className="at-fade-in at-fade-in-1" style={{ backgroundColor: palette.card, color: palette.cardText, padding: "1.75rem", borderRadius: "12px", boxShadow: "0 6px 20px rgba(0,0,0,0.28)" }}>
+                  <h3 style={{ marginTop: 0, color: palette.cardText, fontFamily: "'Fraunces', serif", fontWeight: 600 }}>Register Batch (Farmer)</h3>
                   <form onSubmit={handleRegisterBatch} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    <input type="text" placeholder="Batch ID (e.g. MANGO-2026-0002)" value={batchId} onChange={(e) => setBatchId(e.target.value)} style={inputStyle} />
-                    <input type="text" placeholder="Product Name (e.g. Mango)" value={productName} onChange={(e) => setProductName(e.target.value)} style={inputStyle} />
-                    <input type="text" placeholder="Variety (e.g. Alphonso)" value={variety} onChange={(e) => setVariety(e.target.value)} style={inputStyle} />
-                    <input type="text" placeholder="Farm Name" value={farmName} onChange={(e) => setFarmName(e.target.value)} style={inputStyle} />
-                    <input type="text" placeholder="Origin Location" value={originLocation} onChange={(e) => setOriginLocation(e.target.value)} style={inputStyle} />
-                    <button type="submit" disabled={submitting} style={{ backgroundColor: palette.green, color: "#fff", padding: "0.8rem", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem", letterSpacing: "0.01em" }}>
+                    <input className="at-input" type="text" placeholder="Batch ID (e.g. MANGO-2026-0002)" value={batchId} onChange={(e) => setBatchId(e.target.value)} style={inputStyle} />
+                    <input className="at-input" type="text" placeholder="Product Name (e.g. Mango)" value={productName} onChange={(e) => setProductName(e.target.value)} style={inputStyle} />
+                    <input className="at-input" type="text" placeholder="Variety (e.g. Alphonso)" value={variety} onChange={(e) => setVariety(e.target.value)} style={inputStyle} />
+                    <input className="at-input" type="text" placeholder="Farm Name" value={farmName} onChange={(e) => setFarmName(e.target.value)} style={inputStyle} />
+                    <input className="at-input" type="text" placeholder="Origin Location" value={originLocation} onChange={(e) => setOriginLocation(e.target.value)} style={inputStyle} />
+                    <button type="submit" disabled={submitting} className="at-btn" style={{ backgroundColor: palette.green, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem" }}>
                       {submitting ? "Mining Block..." : "Register Batch On-Chain"}
                     </button>
                   </form>
                 </div>
               )}
 
-              <div style={{ backgroundColor: palette.darkCard, border: `1px solid ${palette.darkCardBorder}`, padding: "1.5rem", borderRadius: "10px" }}>
-                <h3 style={{ marginTop: 0, color: palette.greenBright }}>
+              <div className="at-fade-in at-fade-in-2" style={{ backgroundColor: palette.darkCard, border: `1px solid ${palette.darkCardBorder}`, padding: "1.75rem", borderRadius: "12px" }}>
+                <h3 style={{ marginTop: 0, color: palette.greenBright, fontFamily: "'Fraunces', serif", fontWeight: 600 }}>
                   {selectedBatchId ? `Log Event: ${selectedBatchId}` : "Select a Batch to Log Event"}
                 </h3>
                 {selectedBatchId ? (
                   <form onSubmit={handleAddEvent} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    <input type="text" placeholder="Location (e.g. Mumbai Port, Store #14)" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} style={darkInputStyle} />
+                    <input className="at-input" type="text" placeholder="Location (e.g. Mumbai Port, Store #14)" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} style={darkInputStyle} />
 
                     <div>
                       <label style={{ fontSize: "0.8rem", color: palette.textMuted, display: "block", marginBottom: "0.25rem" }}>Allowed Status ({role}):</label>
-                      <select value={eventStatus} onChange={(e) => setEventStatus(e.target.value)} style={darkInputStyle}>
+                      <select className="at-input" value={eventStatus} onChange={(e) => setEventStatus(e.target.value)} style={darkInputStyle}>
                         {getAvailableStatuses().map((st) => (
                           <option key={st} value={st}>{st}</option>
                         ))}
                       </select>
                     </div>
 
-                    <input type="text" placeholder="Notes / Sensor Data" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} style={darkInputStyle} />
-                    <button type="submit" disabled={submitting} style={{ backgroundColor: palette.rust, color: "#fff", padding: "0.8rem", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem" }}>
+                    <input className="at-input" type="text" placeholder="Notes / Sensor Data" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} style={darkInputStyle} />
+                    <button type="submit" disabled={submitting} className="at-btn" style={{ backgroundColor: palette.rust, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem" }}>
                       {submitting ? "Mining Event..." : `Log ${role} Event`}
                     </button>
                   </form>
@@ -245,8 +277,8 @@ export const App: React.FC = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
             {role === "Consumer" && (
-              <div style={{ backgroundColor: palette.green, color: "#fff", padding: "1rem", borderRadius: "8px" }}>
-                <h4 style={{ margin: "0 0 0.5rem 0" }}>🔍 Consumer Verification View</h4>
+              <div className="at-fade-in" style={{ backgroundColor: palette.green, color: "#fff", padding: "1.1rem", borderRadius: "10px" }}>
+                <h4 style={{ margin: "0 0 0.5rem 0", fontFamily: "'Fraunces', serif" }}>🔍 Consumer Verification View</h4>
                 <p style={{ margin: 0, fontSize: "0.9rem" }}>
                   Scan product QR code or select a batch to inspect its immutable provenance timeline.
                 </p>
@@ -254,28 +286,29 @@ export const App: React.FC = () => {
             )}
 
             {/* Batch List */}
-            <div>
-              <h3 style={{ marginTop: 0, color: palette.textCream }}>Registered Batches</h3>
+            <div className="at-fade-in at-fade-in-1">
+              <h3 style={{ marginTop: 0, color: palette.textCream, fontFamily: "'Fraunces', serif", fontWeight: 600 }}>Registered Batches</h3>
               {loading ? (
                 <p style={{ color: palette.textMuted }}>Loading smart contract state...</p>
               ) : batches.length === 0 ? (
                 <p style={{ color: palette.textMuted }}>No batches created yet.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                  {batches.map((b) => (
+                  {batches.map((b, i) => (
                     <div
                       key={b.batchId}
                       onClick={() => handleSelectBatch(b.batchId)}
+                      className="at-batch-card"
                       style={{
-                        backgroundColor: selectedBatchId === b.batchId ? "#3B2F1F" : palette.darkCard,
+                        backgroundColor: selectedBatchId === b.batchId ? "#2A4436" : palette.darkCard,
                         border: selectedBatchId === b.batchId ? `2px solid ${palette.greenBright}` : `1px solid ${palette.darkCardBorder}`,
                         padding: "1rem",
-                        borderRadius: "8px",
+                        borderRadius: "10px",
                         cursor: "pointer",
-                        transition: "border-color 0.2s",
+                        animationDelay: `${i * 0.05}s`,
                       }}
                     >
-                      <h4 style={{ margin: "0 0 0.25rem 0", color: palette.greenBright }}>{b.batchId}</h4>
+                      <h4 style={{ margin: "0 0 0.25rem 0", color: palette.greenBright, fontFamily: "'Fraunces', serif" }}>{b.batchId}</h4>
                       <p style={{ margin: 0, fontSize: "0.9rem", color: palette.textCream }}>{b.cropName} — {b.farmOrigin}</p>
                     </div>
                   ))}
@@ -285,13 +318,13 @@ export const App: React.FC = () => {
 
             {/* Selected Batch: Event Timeline & QR Code */}
             {selectedBatchId && (
-              <div style={{ backgroundColor: palette.darkCard, padding: "1.25rem", borderRadius: "8px", border: `1px solid ${palette.darkCardBorder}` }}>
+              <div className="at-fade-in at-fade-in-2" style={{ backgroundColor: palette.darkCard, padding: "1.4rem", borderRadius: "10px", border: `1px solid ${palette.darkCardBorder}` }}>
 
                 {/* QR Code Verification Card */}
-                <div style={{ backgroundColor: palette.card, color: palette.cardText, padding: "1rem", borderRadius: "8px", display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.25rem" }}>
+                <div style={{ backgroundColor: palette.card, color: palette.cardText, padding: "1.1rem", borderRadius: "10px", display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.4rem" }}>
                   <QRCodeSVG value={currentVerificationUrl} size={110} level="M" />
                   <div>
-                    <h4 style={{ margin: "0 0 0.25rem 0", color: palette.cardText }}>Consumer QR Tag</h4>
+                    <h4 style={{ margin: "0 0 0.25rem 0", color: palette.cardText, fontFamily: "'Fraunces', serif" }}>Consumer QR Tag</h4>
                     <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.8rem", color: "#6B5842" }}>
                       Scan code to verify origin and complete block history on mobile.
                     </p>
@@ -302,7 +335,7 @@ export const App: React.FC = () => {
                 </div>
 
                 {/* Timeline */}
-                <h4 style={{ marginTop: 0, borderBottom: `1px solid ${palette.darkCardBorder}`, paddingBottom: "0.5rem", color: palette.textCream }}>
+                <h4 style={{ marginTop: 0, borderBottom: `1px solid ${palette.darkCardBorder}`, paddingBottom: "0.5rem", color: palette.textCream, fontFamily: "'Fraunces', serif" }}>
                   On-Chain Timeline: {selectedBatchId}
                 </h4>
                 {selectedEvents.length === 0 ? (
@@ -310,8 +343,8 @@ export const App: React.FC = () => {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     {selectedEvents.map((evt, idx) => (
-                      <div key={idx} style={{ borderLeft: `2px solid ${palette.rustSoft}`, paddingLeft: "0.75rem" }}>
-                        <p style={{ margin: 0, fontWeight: "bold", color: palette.greenSoft, fontSize: "0.9rem" }}>{evt.status}</p>
+                      <div key={idx} className="at-timeline-item" style={{ borderLeft: `2px solid ${palette.rustSoft}`, paddingLeft: "0.75rem", animationDelay: `${idx * 0.06}s` }}>
+                        <p style={{ margin: 0, fontWeight: 700, color: palette.greenSoft, fontSize: "0.9rem" }}>{evt.status}</p>
                         <p style={{ margin: "0.2rem 0", fontSize: "0.85rem", color: palette.textCream }}>📍 {evt.location}</p>
                         <p style={{ margin: 0, fontSize: "0.8rem", color: palette.textMuted }}>📝 {evt.notes}</p>
                         <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.7rem", color: "#8A7355" }}>
@@ -331,7 +364,7 @@ export const App: React.FC = () => {
   );
 };
 
-const inputStyle: React.CSSProperties = { width: "100%", padding: "0.65rem", borderRadius: "5px", border: "1px solid #C9B896", backgroundColor: "#EFE4C9", color: "#2E2415", boxSizing: "border-box", fontFamily: "sans-serif" };
-const darkInputStyle: React.CSSProperties = { width: "100%", padding: "0.65rem", borderRadius: "5px", border: "1px solid #6B5842", backgroundColor: "#241C12", color: "#EEE3CC", boxSizing: "border-box", fontFamily: "sans-serif" };
+const inputStyle: React.CSSProperties = { width: "100%", padding: "0.7rem", borderRadius: "6px", border: "1px solid #C9B896", backgroundColor: "#EDE6D2", color: "#2E2A1F", boxSizing: "border-box", fontFamily: "'Work Sans', sans-serif" };
+const darkInputStyle: React.CSSProperties = { width: "100%", padding: "0.7rem", borderRadius: "6px", border: "1px solid #4F6339", backgroundColor: "#182620", color: "#EDE8D9", boxSizing: "border-box", fontFamily: "'Work Sans', sans-serif" };
 
 export default App;
