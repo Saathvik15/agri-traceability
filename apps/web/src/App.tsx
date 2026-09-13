@@ -97,6 +97,15 @@ const GlobalStyle = () => (
       from { opacity: 0.4; }
       to   { opacity: 1; }
     }
+    @keyframes pingRing {
+      0%   { transform: scale(0.92); opacity: 0.55; }
+      75%  { transform: scale(1.32); opacity: 0; }
+      100% { transform: scale(1.34); opacity: 0; }
+    }
+    @keyframes tagRise {
+      from { opacity: 0; transform: translateY(10px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
     @keyframes floatSpore {
       0%   { transform: translateY(0) translateX(0); opacity: 0; }
       10%  { opacity: 0.5; }
@@ -207,6 +216,18 @@ const GlobalStyle = () => (
 
     .at-banner { animation: riseIn 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 
+    .at-tag-static {
+      animation: tagRise 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    .at-qr-wrap { position: relative; display: inline-flex; border-radius: 14px; }
+    .at-qr-ring {
+      position: absolute; inset: -9px; border-radius: 16px;
+      border: 1.5px solid rgba(166,93,52,0.55);
+      animation: pingRing 2.8s cubic-bezier(0.4,0,0.2,1) infinite;
+      pointer-events: none;
+    }
+    .at-qr-ring.at-ring-delay { animation-delay: 1.4s; }
+
     .at-select {
       appearance: none; -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23A9C48C'/%3E%3C/svg%3E");
@@ -246,7 +267,77 @@ const ROLE_LABELS: Record<Role, string> = {
   Consumer: "Consumer",
 };
 
+const LeafOrnament = () => (
+  <svg width="34" height="34" viewBox="0 0 34 34" fill="none" style={{ margin: "0 auto" }}>
+    <path
+      d="M17 30V12C13 12 8 9 8 3c6 0 9 3.5 9 9.5C17 5 20.5 3 26 3c0 6-5 9-9 9v18"
+      stroke={palette.gold} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const HomeView: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
+  <div style={{ position: "relative", zIndex: 1, maxWidth: "780px", margin: "0 auto", padding: "5rem 1.5rem 4rem", textAlign: "center" }}>
+    <div className="at-in" style={{ transform: "scale(1.7)", marginBottom: "1.6rem" }}>
+      <SprigIcon />
+    </div>
+
+    <h1 className="at-in at-in-1" style={{ margin: "0 0 0.6rem 0", color: palette.cream, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "2.6rem", letterSpacing: "0.005em" }}>
+      Harvest Trail
+    </h1>
+    <p className="at-in at-in-1" style={{ margin: "0 auto 3rem auto", maxWidth: "440px", color: palette.textMuted, fontSize: "1rem", lineHeight: 1.6 }}>
+      A shared ledger for tracing food from field to shelf — logged by the people who grow, move, and sell it.
+    </p>
+
+    <div className="at-in at-in-2" style={{ marginBottom: "3rem" }}>
+      <LeafOrnament />
+      <p style={{
+        margin: "1.1rem auto 0 auto", maxWidth: "600px", color: palette.cream,
+        fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 500,
+        fontSize: "1.6rem", lineHeight: 1.55,
+      }}>
+        Every crate has a route, and every route has a story — from the hands that grew it to the ones who bring it home.
+      </p>
+    </div>
+
+    <button
+      type="button" onClick={onEnter} className="at-btn at-in at-in-3"
+      style={{
+        backgroundColor: palette.sage, color: "#fff", padding: "0.9rem 2.1rem", border: "none",
+        borderRadius: "999px", fontWeight: 600, cursor: "pointer", fontSize: "0.98rem",
+        fontFamily: "'Work Sans', sans-serif", marginBottom: "3.5rem",
+      }}
+    >
+      Enter the ledger
+    </button>
+
+    <div className="at-fade" style={{ position: "relative", animationDelay: "0.4s", maxWidth: "560px", margin: "0 auto" }}>
+      <div style={{
+        position: "absolute", top: "19px", left: "11%", right: "11%", height: "2px",
+        background: `linear-gradient(90deg, ${palette.sage}, ${palette.sienna}, ${palette.ochre}, ${palette.teal})`,
+        opacity: 0.6,
+      }} />
+      <div style={{ position: "relative", display: "flex", justifyContent: "space-between" }}>
+        {LEAF_ROLES.map((r) => (
+          <div key={r} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.55rem" }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: "50%", backgroundColor: palette.panel,
+              border: `2px solid ${ROLE_ACCENT[r].base}`, display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "'Fraunces', serif", fontWeight: 700, color: ROLE_ACCENT[r].base, fontSize: "0.95rem",
+            }}>
+              {r.charAt(0)}
+            </div>
+            <span style={{ fontSize: "0.78rem", color: palette.textMuted }}>{ROLE_LABELS[r]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 export const App: React.FC = () => {
+  const [view, setView] = useState<"home" | "dashboard">("home");
+
   // Batch Form State
   const [batchId, setBatchId] = useState("");
   const [productName, setProductName] = useState("");
@@ -325,6 +416,7 @@ export const App: React.FC = () => {
     if (qBatchId) {
       handleSelectBatch(qBatchId);
       setRole("Consumer");
+      setView("dashboard");
     }
   }, []);
 
@@ -413,6 +505,10 @@ export const App: React.FC = () => {
       <div className="at-canopy-glow" />
       <div className="at-ember-glow" />
 
+      {view === "home" ? (
+        <HomeView onEnter={() => setView("dashboard")} />
+      ) : (
+        <>
       <header
         className="at-in"
         style={{
@@ -625,6 +721,7 @@ export const App: React.FC = () => {
                 {/* QR Code Verification Card — a static tag, stacked and centered */}
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
                   <div
+                    className="at-tag-static"
                     style={{
                       backgroundColor: palette.paper, color: palette.paperText, padding: "1.3rem 1.4rem",
                       borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center",
@@ -637,7 +734,11 @@ export const App: React.FC = () => {
                     <h4 style={{ margin: 0, color: palette.paperText, fontFamily: "'Fraunces', serif", fontSize: "1rem" }}>
                       Consumer tag
                     </h4>
-                    <QRCodeSVG value={currentVerificationUrl} size={112} level="M" fgColor={palette.siennaDeep} style={{ flexShrink: 0 }} />
+                    <div className="at-qr-wrap">
+                      <span className="at-qr-ring" />
+                      <span className="at-qr-ring at-ring-delay" />
+                      <QRCodeSVG value={currentVerificationUrl} size={112} level="M" fgColor={palette.siennaDeep} style={{ flexShrink: 0, position: "relative" }} />
+                    </div>
                     <div style={{ width: "70%", borderTop: `1px dashed ${palette.paperMuted}66` }} />
                     <div>
                       <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.78rem", color: palette.paperMuted, lineHeight: 1.5 }}>
@@ -680,6 +781,8 @@ export const App: React.FC = () => {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };
