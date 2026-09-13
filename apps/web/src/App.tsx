@@ -15,7 +15,7 @@ import {
 const HOME_BG_URL =
   "https://images.unsplash.com/photo-1635176490410-5116fc497d45?q=80&w=2400&auto=format&fit=crop";
 const DASHBOARD_BG_URL =
-  "https://images.unsplash.com/photo-1632776350300-11016768b521?q=80&w=2400&auto=format&fit=crop";
+  "https://images.unsplash.com/photo-1728134529714-887bb3b6d37b?q=80&w=2400&auto=format&fit=crop";
 
 // ---- Earthy palette: soil, canopy, bark, clay, and a few accent minerals ----
 const palette = {
@@ -259,9 +259,16 @@ const GrainOverlay = () => (
 
 const SprigIcon = () => (
   <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="at-sprig">
-    <path d="M15 27V9" stroke="#A9C48C" strokeWidth="1.6" strokeLinecap="round" />
-    <path d="M15 14C11 14 8 11 8 6c5 0 8 3 8 8 4-5 2-9 2-9 4 3 3 8 -1 11" stroke="#E0A468" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="15" cy="9" r="1.6" fill="#CDA35C" />
+    <path d="M15 27V12" stroke="#A9C48C" strokeWidth="1.8" strokeLinecap="round" />
+    <path
+      d="M15 15.5C10.2 15.5 6.3 11.6 6.3 5.5C11.1 5.5 15 9.4 15 15.5"
+      stroke="#6F8D5B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+    />
+    <path
+      d="M15 15.5C19.8 15.5 23.7 11.6 23.7 5.5C18.9 5.5 15 9.4 15 15.5"
+      stroke="#E0A468" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+    />
+    <circle cx="15" cy="10.5" r="1.7" fill="#CDA35C" />
   </svg>
 );
 
