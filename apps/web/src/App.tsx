@@ -91,6 +91,16 @@ const GlobalStyle = () => (
     }
 
     .at-root { position: relative; isolation: isolate; }
+    .at-backdrop-photo {
+      position: fixed; inset: 0; z-index: -2; pointer-events: none;
+      background-image: url('https://images.unsplash.com/photo-1757338409748-35a566416113?fm=jpg&q=70&w=2400&auto=format&fit=crop');
+      background-size: cover; background-position: center; filter: saturate(0.85);
+    }
+    .at-backdrop-scrim {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        linear-gradient(160deg, rgba(22,36,28,0.94) 0%, rgba(22,36,28,0.88) 40%, rgba(27,20,13,0.94) 100%);
+    }
     .at-grain {
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
       opacity: 0.05; mix-blend-mode: overlay;
@@ -241,7 +251,7 @@ export const App: React.FC = () => {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const tabTrackRef = useRef<HTMLDivElement>(null);
+  const tabButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [pillStyle, setPillStyle] = useState<{ left: number; width: number }>({ left: 4, width: 0 });
 
   const getAvailableStatuses = () => {
@@ -301,10 +311,8 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const track = tabTrackRef.current;
-    if (!track) return;
     const idx = LEAF_ROLES.indexOf(role);
-    const btn = track.children[idx] as HTMLElement | undefined;
+    const btn = tabButtonRefs.current[idx];
     if (btn) {
       setPillStyle({ left: btn.offsetLeft, width: btn.offsetWidth });
     }
@@ -374,7 +382,6 @@ export const App: React.FC = () => {
     <div
       className="at-root"
       style={{
-        background: `linear-gradient(160deg, ${palette.soilTop} 0%, ${palette.soilTop} 40%, ${palette.soilBottom} 100%)`,
         color: palette.cream,
         minHeight: "100vh",
         fontFamily: "'Work Sans', sans-serif",
@@ -382,6 +389,8 @@ export const App: React.FC = () => {
       }}
     >
       <GlobalStyle />
+      <div className="at-backdrop-photo" />
+      <div className="at-backdrop-scrim" />
       <GrainOverlay />
       <div className="at-canopy-glow" />
 
@@ -403,12 +412,13 @@ export const App: React.FC = () => {
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <span style={{ fontSize: "0.82rem", color: palette.textMuted }}>Viewing as</span>
-          <div className="at-tab-track" ref={tabTrackRef}>
+          <div className="at-tab-track">
             <div className="at-tab-pill" style={{ left: pillStyle.left, width: pillStyle.width }} />
-            {LEAF_ROLES.map((r) => (
+            {LEAF_ROLES.map((r, i) => (
               <button
                 key={r}
                 type="button"
+                ref={(el) => (tabButtonRefs.current[i] = el)}
                 className={`at-tab-btn ${role === r ? "active" : ""}`}
                 onClick={() => setRole(r)}
               >
