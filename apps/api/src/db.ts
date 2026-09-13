@@ -7,7 +7,6 @@ let dbInstance: Database | null = null;
 export async function getDb(): Promise<Database> {
   if (dbInstance) return dbInstance;
 
-  // Resolves traceability.db inside apps/api
   const dbPath = path.resolve(process.cwd(), 'traceability.db');
 
   dbInstance = await open({

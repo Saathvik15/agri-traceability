@@ -1,53 +1,70 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
-  fetchBatches,
+  fetchAllBatches,
+  fetchBatchDetails,
   createBatch,
-  appendEvent,
-  fetchQrCode,
+  addEvent,
   type Batch,
-  type TraceEvent,
-} from './api';
+  type SupplyChainEvent,
+} from "./services/api";
 
-export default function App() {
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string>('Farmer');
-  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
-  const [qrCode, setQrCode] = useState<{ qrDataUrl: string; verifyUrl: string } | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-
-  // New Batch Form State
-  const [newBatch, setNewBatch] = useState({
-    id: '',
-    productName: '',
-    variety: '',
-    farmName: '',
-    origin: '',
-    harvestDate: new Date().toISOString().split('T')[0],
-    quantityKg: 100,
-  });
+export const App: React.FC = () => {
+  // Batch Form State
+  const [batchId, setBatchId] = useState("");
+  const [productName, setProductName] = useState("");
+  const [variety, setVariety] = useState("");
+  const [farmName, setFarmName] = useState("");
+  const [originLocation, setOriginLocation] = useState("");
 
   // Event Form State
-  const [eventData, setEventData] = useState({
-    eventType: 'TEMPERATURE_CHECK',
-    actorOrganization: '',
-    note: '',
-    nextStatus: '',
-  });
+  const [eventLocation, setEventLocation] = useState("");
+  const [eventStatus, setEventStatus] = useState("In Transit");
+  const [eventNotes, setEventNotes] = useState("");
+
+  // UI State
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [selectedEvents, setSelectedEvents] = useState<SupplyChainEvent[]>([]);
+  const [role, setRole] = useState<"Farmer" | "Distributor" | "Retailer" | "Consumer">("Farmer");
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const getAvailableStatuses = () => {
+    switch (role) {
+      case "Farmer":
+        return ["Harvested", "Packed at Origin", "Ready for Pickup"];
+      case "Distributor":
+        return ["Picked Up", "In Transit", "Stored in Cold Storage", "Arrived at Regional Hub"];
+      case "Retailer":
+        return ["Received at Store", "Quality Inspection Passed", "Stocked on Shelf"];
+      default:
+        return [];
+    }
+  };
 
   const loadBatches = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await fetchBatches();
+      const data = await fetchAllBatches();
       setBatches(data);
-      if (selectedBatch) {
-        const updated = data.find((b) => b.id === selectedBatch.id);
-        if (updated) setSelectedBatch(updated);
-      }
+      setError("");
     } catch (err: any) {
-      setError(err.message || 'Failed to connect to backend.');
+      setError(err.message || "Failed to fetch batches");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectBatch = async (id: string) => {
+    setSelectedBatchId(id);
+    try {
+      const details = await fetchBatchDetails(id);
+      setSelectedEvents(details.events);
+    } catch (err: any) {
+      setError("Could not load event history for batch");
     }
   };
 
@@ -55,160 +72,242 @@ export default function App() {
     loadBatches();
   }, []);
 
-  const handleCreateBatch = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const statuses = getAvailableStatuses();
+    if (statuses.length > 0) {
+      setEventStatus(statuses[0]);
+    }
+  }, [role]);
+
+  // Insert the URL auto-select hook here:
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qBatchId = params.get("batchId");
+    if (qBatchId) {
+      handleSelectBatch(qBatchId);
+      setRole("Consumer");
+    }
+  }, []);
+
+  const handleRegisterBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    if (!batchId || !productName || !farmName) return;
+
+    setSubmitting(true);
+    setError("");
+    setSuccessMsg("");
+
     try {
-      await createBatch(newBatch, selectedRole);
-      setNewBatch({
-        id: '',
-        productName: '',
-        variety: '',
-        farmName: '',
-        origin: '',
-        harvestDate: new Date().toISOString().split('T')[0],
-        quantityKg: 100,
+      await createBatch({
+        batchId,
+        cropName: variety ? `${productName} (${variety})` : productName,
+        farmOrigin: originLocation ? `${farmName}, ${originLocation}` : farmName,
       });
+
+      setSuccessMsg(`Batch "${batchId}" registered on-chain!`);
+      setBatchId("");
+      setProductName("");
+      setVariety("");
+      setFarmName("");
+      setOriginLocation("");
       await loadBatches();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Failed to register batch");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleAppendEvent = async (e: React.FormEvent) => {
+  const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBatch) return;
-    setError('');
+    if (!selectedBatchId || !eventLocation || !eventNotes) return;
+
+    setSubmitting(true);
+    setError("");
+    setSuccessMsg("");
+
     try {
-      await appendEvent(selectedBatch.id, eventData);
-      setEventData({ eventType: 'TEMPERATURE_CHECK', actorOrganization: '', note: '', nextStatus: '' });
-      await loadBatches();
+      await addEvent({
+        batchId: selectedBatchId,
+        location: eventLocation,
+        status: eventStatus,
+        notes: eventNotes,
+      });
+
+      setSuccessMsg(`Supply chain event logged for ${selectedBatchId}!`);
+      setEventLocation("");
+      setEventNotes("");
+      await handleSelectBatch(selectedBatchId);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Failed to add event");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleLoadQr = async (batchId: string) => {
-    try {
-      const qr = await fetchQrCode(batchId);
-      setQrCode(qr);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
+  const currentVerificationUrl = selectedBatchId
+    ? `${window.location.origin}/?batchId=${selectedBatchId}`
+    : "";
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '2px solid #eee', paddingBottom: '1rem' }}>
-        <h2>🌾 Agri-Traceability Dashboard</h2>
-        <div>
-          <label style={{ marginRight: '0.5rem', fontWeight: 'bold' }}>Simulate Role:</label>
-          <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} style={{ padding: '0.4rem 0.8rem' }}>
+    <div style={{ backgroundColor: "#121418", color: "#e2e8f0", minHeight: "100vh", fontFamily: "sans-serif", padding: "2rem" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #2d3748", paddingBottom: "1rem", maxWidth: "1100px", margin: "0 auto 2rem auto" }}>
+        <h2 style={{ margin: 0 }}>🌾 Agri-Traceability Dashboard</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <label style={{ fontSize: "0.9rem" }}>Active Role:</label>
+          <select value={role} onChange={(e: any) => setRole(e.target.value)} style={{ padding: "0.4rem 0.8rem", borderRadius: "4px", backgroundColor: "#2d3748", color: "#68d391", fontWeight: "bold", border: "1px solid #4a5568", cursor: "pointer" }}>
             <option value="Farmer">Farmer</option>
-            <option value="Logistics">Logistics</option>
+            <option value="Distributor">Distributor / Logistics</option>
             <option value="Retailer">Retailer</option>
-            <option value="Regulator">Regulator</option>
             <option value="Consumer">Consumer</option>
           </select>
         </div>
       </header>
 
-      {error && <div style={{ background: '#ffebee', color: '#c62828', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem' }}>{error}</div>}
+      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        {error && <div style={{ backgroundColor: "#fff5f5", color: "#e53e3e", padding: "0.75rem", borderRadius: "6px", marginBottom: "1.5rem" }}>{error}</div>}
+        {successMsg && <div style={{ backgroundColor: "#f0fff4", color: "#38a169", padding: "0.75rem", borderRadius: "6px", marginBottom: "1.5rem" }}>{successMsg}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-        {/* Left Column: Actions */}
-        <div>
-          {selectedRole === 'Farmer' && (
-            <div style={{ background: '#f9f9f9', padding: '1.2rem', borderRadius: '8px', marginBottom: '2rem', border: '1px solid #ddd' }}>
-              <h3>Register New Crop Batch</h3>
-              <form onSubmit={handleCreateBatch} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                <input placeholder="Batch ID (e.g. MANGO-2026-0002)" value={newBatch.id} onChange={(e) => setNewBatch({ ...newBatch, id: e.target.value })} required />
-                <input placeholder="Product Name (e.g. Mango)" value={newBatch.productName} onChange={(e) => setNewBatch({ ...newBatch, productName: e.target.value })} required />
-                <input placeholder="Variety (e.g. Alphonso)" value={newBatch.variety} onChange={(e) => setNewBatch({ ...newBatch, variety: e.target.value })} required />
-                <input placeholder="Farm Name" value={newBatch.farmName} onChange={(e) => setNewBatch({ ...newBatch, farmName: e.target.value })} required />
-                <input placeholder="Origin Location" value={newBatch.origin} onChange={(e) => setNewBatch({ ...newBatch, origin: e.target.value })} required />
-                <input type="date" value={newBatch.harvestDate} onChange={(e) => setNewBatch({ ...newBatch, harvestDate: e.target.value })} required />
-                <input type="number" placeholder="Quantity (kg)" value={newBatch.quantityKg} onChange={(e) => setNewBatch({ ...newBatch, quantityKg: Number(e.target.value) })} required />
-                <button type="submit" style={{ padding: '0.6rem', cursor: 'pointer', background: '#2e7d32', color: '#fff', border: 'none', borderRadius: '4px' }}>Register Batch</button>
-              </form>
-            </div>
-          )}
-
-          {selectedBatch && (
-            <div style={{ background: '#f9f9f9', padding: '1.2rem', borderRadius: '8px', border: '1px solid #ddd' }}>
-              <h3>Append Event to {selectedBatch.id}</h3>
-              <form onSubmit={handleAppendEvent} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                <input placeholder="Event Type (e.g. HANDOFF_ACCEPTED)" value={eventData.eventType} onChange={(e) => setEventData({ ...eventData, eventType: e.target.value })} required />
-                <input placeholder="Actor / Organization" value={eventData.actorOrganization} onChange={(e) => setEventData({ ...eventData, actorOrganization: e.target.value })} required />
-                <input placeholder="Notes / Telemetry" value={eventData.note} onChange={(e) => setEventData({ ...eventData, note: e.target.value })} />
-                <select value={eventData.nextStatus} onChange={(e) => setEventData({ ...eventData, nextStatus: e.target.value })}>
-                  <option value="">Keep Status Unchanged ({selectedBatch.status})</option>
-                  <option value="AWAITING_PICKUP">AWAITING_PICKUP</option>
-                  <option value="IN_TRANSIT">IN_TRANSIT</option>
-                  <option value="AT_RETAIL">AT_RETAIL</option>
-                  <option value="AVAILABLE">AVAILABLE</option>
-                  <option value="RECALLED">RECALLED</option>
-                </select>
-                <button type="submit" style={{ padding: '0.6rem', cursor: 'pointer', background: '#1565c0', color: '#fff', border: 'none', borderRadius: '4px' }}>Append Trace Event</button>
-              </form>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Batches & Timeline */}
-        <div>
-          <h3>Registered Batches</h3>
-          {loading && <p>Loading batches...</p>}
-          {batches.length === 0 && !loading && <p>No batches created yet.</p>}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {batches.map((batch) => (
-              <div
-                key={batch.id}
-                onClick={() => { setSelectedBatch(batch); handleLoadQr(batch.id); }}
-                style={{
-                  border: selectedBatch?.id === batch.id ? '2px solid #1565c0' : '1px solid #ccc',
-                  borderRadius: '6px',
-                  padding: '1rem',
-                  cursor: 'pointer',
-                  background: selectedBatch?.id === batch.id ? '#e3f2fd' : '#fff',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <strong>{batch.productName} ({batch.variety})</strong>
-                  <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#333', color: '#fff', fontSize: '0.8rem' }}>{batch.status}</span>
+        <div style={{ display: "grid", gridTemplateColumns: role === "Consumer" ? "1fr" : "1fr 1fr", gap: "2rem" }}>
+          
+          {/* Action Column */}
+          {role !== "Consumer" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {role === "Farmer" && (
+                <div style={{ backgroundColor: "#ffffff", color: "#1a202c", padding: "1.5rem", borderRadius: "8px" }}>
+                  <h3 style={{ marginTop: 0, color: "#2d3748" }}>Register Batch (Farmer)</h3>
+                  <form onSubmit={handleRegisterBatch} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    <input type="text" placeholder="Batch ID (e.g. MANGO-2026-0002)" value={batchId} onChange={(e) => setBatchId(e.target.value)} style={inputStyle} />
+                    <input type="text" placeholder="Product Name (e.g. Mango)" value={productName} onChange={(e) => setProductName(e.target.value)} style={inputStyle} />
+                    <input type="text" placeholder="Variety (e.g. Alphonso)" value={variety} onChange={(e) => setVariety(e.target.value)} style={inputStyle} />
+                    <input type="text" placeholder="Farm Name" value={farmName} onChange={(e) => setFarmName(e.target.value)} style={inputStyle} />
+                    <input type="text" placeholder="Origin Location" value={originLocation} onChange={(e) => setOriginLocation(e.target.value)} style={inputStyle} />
+                    <button type="submit" disabled={submitting} style={{ backgroundColor: "#276749", color: "#fff", padding: "0.75rem", border: "none", borderRadius: "4px", fontWeight: "bold", cursor: "pointer" }}>
+                      {submitting ? "Mining Block..." : "Register Batch On-Chain"}
+                    </button>
+                  </form>
                 </div>
-                <p style={{ margin: '0.4rem 0', fontSize: '0.9rem', color: '#555' }}>
-                  ID: {batch.id} | Farm: {batch.farmName} | Owner: {batch.ownerOrganization}
+              )}
+
+              <div style={{ backgroundColor: "#1a202c", border: "1px solid #4a5568", padding: "1.5rem", borderRadius: "8px" }}>
+                <h3 style={{ marginTop: 0, color: "#68d391" }}>
+                  {selectedBatchId ? `Log Event: ${selectedBatchId}` : "Select a Batch to Log Event"}
+                </h3>
+                {selectedBatchId ? (
+                  <form onSubmit={handleAddEvent} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    <input type="text" placeholder="Location (e.g. Mumbai Port, Store #14)" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} style={darkInputStyle} />
+                    
+                    <div>
+                      <label style={{ fontSize: "0.8rem", color: "#a0aec0", display: "block", marginBottom: "0.25rem" }}>Allowed Status ({role}):</label>
+                      <select value={eventStatus} onChange={(e) => setEventStatus(e.target.value)} style={darkInputStyle}>
+                        {getAvailableStatuses().map((st) => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <input type="text" placeholder="Notes / Sensor Data" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} style={darkInputStyle} />
+                    <button type="submit" disabled={submitting} style={{ backgroundColor: "#3182ce", color: "#fff", padding: "0.75rem", border: "none", borderRadius: "4px", fontWeight: "bold", cursor: "pointer" }}>
+                      {submitting ? "Mining Event..." : `Log ${role} Event`}
+                    </button>
+                  </form>
+                ) : (
+                  <p style={{ color: "#a0aec0", fontSize: "0.9rem" }}>Select any batch from the list on the right to log an update for this role.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Verification & Display Column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            
+            {role === "Consumer" && (
+              <div style={{ backgroundColor: "#2b6cb0", color: "#fff", padding: "1rem", borderRadius: "6px" }}>
+                <h4 style={{ margin: "0 0 0.5rem 0" }}>🔍 Consumer Verification View</h4>
+                <p style={{ margin: 0, fontSize: "0.9rem" }}>
+                  Scan product QR code or select a batch to inspect its immutable provenance timeline.
                 </p>
+              </div>
+            )}
 
-                {selectedBatch?.id === batch.id && (
-                  <div style={{ marginTop: '1rem', borderTop: '1px solid #ccc', paddingTop: '0.5rem' }}>
-                    <h4>Audit Trail Timeline ({batch.events.length} Events)</h4>
-                    <ul style={{ paddingLeft: '1.2rem', fontSize: '0.85rem' }}>
-                      {batch.events.map((evt: TraceEvent) => (
-                        <li key={evt.id} style={{ marginBottom: '0.4rem' }}>
-                          <strong>{evt.type}</strong> by <em>{evt.actorOrganization}</em> <br />
-                          <small>{new Date(evt.dateTime).toLocaleString()}</small> - {evt.note}
-                          <br />
-                          <code style={{ fontSize: '0.75rem', color: '#777' }}>Tx: {evt.transactionId}</code>
-                        </li>
-                      ))}
-                    </ul>
+            {/* Batch List */}
+            <div>
+              <h3 style={{ marginTop: 0 }}>Registered Batches</h3>
+              {loading ? (
+                <p style={{ color: "#a0aec0" }}>Loading smart contract state...</p>
+              ) : batches.length === 0 ? (
+                <p style={{ color: "#a0aec0" }}>No batches created yet.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {batches.map((b) => (
+                    <div
+                      key={b.batchId}
+                      onClick={() => handleSelectBatch(b.batchId)}
+                      style={{
+                        backgroundColor: selectedBatchId === b.batchId ? "#2d3748" : "#1a202c",
+                        border: selectedBatchId === b.batchId ? "2px solid #68d391" : "1px solid #2d3748",
+                        padding: "1rem",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <h4 style={{ margin: "0 0 0.25rem 0", color: "#68d391" }}>{b.batchId}</h4>
+                      <p style={{ margin: 0, fontSize: "0.9rem" }}>{b.cropName} — {b.farmOrigin}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-                    {qrCode && (
-                      <div style={{ marginTop: '1rem', textAlign: 'center', background: '#fff', padding: '0.5rem', borderRadius: '4px' }}>
-                        <img src={qrCode.qrDataUrl} alt="Batch QR Code" width="120" />
-                        <p style={{ fontSize: '0.75rem', margin: 0 }}>Scan to Verify: {qrCode.verifyUrl}</p>
+            {/* Selected Batch: Event Timeline & QR Code */}
+            {selectedBatchId && (
+              <div style={{ backgroundColor: "#1a202c", padding: "1.25rem", borderRadius: "6px", border: "1px solid #2d3748" }}>
+                
+                {/* QR Code Verification Card */}
+                <div style={{ backgroundColor: "#ffffff", color: "#1a202c", padding: "1rem", borderRadius: "6px", display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.25rem" }}>
+                  <QRCodeSVG value={currentVerificationUrl} size={110} level="M" />
+                  <div>
+                    <h4 style={{ margin: "0 0 0.25rem 0", color: "#2d3748" }}>Consumer QR Tag</h4>
+                    <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.8rem", color: "#718096" }}>
+                      Scan code to verify origin and complete block history on mobile.
+                    </p>
+                    <code style={{ fontSize: "0.75rem", backgroundColor: "#edf2f7", padding: "0.2rem 0.4rem", borderRadius: "4px", color: "#2b6cb0", wordBreak: "break-all" }}>
+                      {currentVerificationUrl}
+                    </code>
+                  </div>
+                </div>
+
+                {/* Timeline */}
+                <h4 style={{ marginTop: 0, borderBottom: "1px solid #2d3748", paddingBottom: "0.5rem" }}>
+                  On-Chain Timeline: {selectedBatchId}
+                </h4>
+                {selectedEvents.length === 0 ? (
+                  <p style={{ color: "#a0aec0", fontSize: "0.9rem" }}>No supply chain events logged yet.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {selectedEvents.map((evt, idx) => (
+                      <div key={idx} style={{ borderLeft: "2px solid #3182ce", paddingLeft: "0.75rem" }}>
+                        <p style={{ margin: 0, fontWeight: "bold", color: "#63b3ed", fontSize: "0.9rem" }}>{evt.status}</p>
+                        <p style={{ margin: "0.2rem 0", fontSize: "0.85rem" }}>📍 {evt.location}</p>
+                        <p style={{ margin: 0, fontSize: "0.8rem", color: "#a0aec0" }}>📝 {evt.notes}</p>
+                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.7rem", color: "#718096" }}>
+                          Actor: {evt.actor ? `${evt.actor.substring(0, 6)}...${evt.actor.substring(evt.actor.length - 4)}` : "Verified Contract"}
+                        </p>
                       </div>
-                    )}
+                    ))}
                   </div>
                 )}
               </div>
-            ))}
+            )}
+
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+const inputStyle: React.CSSProperties = { width: "100%", padding: "0.6rem", borderRadius: "4px", border: "1px solid #cbd5e0", backgroundColor: "#2d3748", color: "#fff", boxSizing: "border-box" };
+const darkInputStyle: React.CSSProperties = { width: "100%", padding: "0.6rem", borderRadius: "4px", border: "1px solid #4a5568", backgroundColor: "#1a202c", color: "#fff", boxSizing: "border-box" };
+
+export default App;

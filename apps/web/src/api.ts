@@ -22,7 +22,7 @@ export interface Batch {
   events: TraceEvent[];
 }
 
-const API_BASE_URL = 'http://localhost:3000/api';
+export const API_BASE_URL = 'https://brave-eggs-know.loca.lt/api';
 
 export async function fetchBatches(): Promise<Batch[]> {
   const response = await fetch(`${API_BASE_URL}/batches`);
