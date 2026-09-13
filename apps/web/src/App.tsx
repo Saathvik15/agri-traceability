@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   fetchAllBatches,
@@ -9,60 +9,214 @@ import {
   type SupplyChainEvent,
 } from "./services/api";
 
-// ---- Earthy palette (forest green / sage / terracotta) ----
+// ---- Earthy palette: soil, canopy, tag-paper, harvest clay ----
 const palette = {
-  bg: "#182620",           // deep forest green-black
-  bgHeaderBorder: "#2F4A3D",
-  card: "#F5F1E4",         // warm cream
-  cardText: "#2E2A1F",
-  darkCard: "#20342A",     // forest green panel
-  darkCardBorder: "#3E5C4C",
-  inputBgOnCream: "#EDE6D2",
-  inputBgOnDark: "#182620",
-  inputBorder: "#4F6339",
-  textCream: "#EDE8D9",
-  textMuted: "#9CB39F",
-  green: "#4F6339",        // olive/sage — primary buttons
-  greenBright: "#A4B69A",  // soft sage highlight
-  greenSoft: "#8FAE7A",
-  rust: "#C18D52",         // warm terracotta/gold — secondary accent
-  rustSoft: "#D4A373",
-  errorBg: "#3A1F16",
-  errorText: "#E2A184",
-  successBg: "#1F3324",
-  successText: "#A4B69A",
+  soilTop: "#16241C",       // deep canopy green (background gradient top)
+  soilBottom: "#1B140D",    // dark tilled-soil brown (background gradient bottom)
+  headerBorder: "#33422F",
+  paper: "#F3EBD8",         // sun-bleached tag paper
+  paperText: "#2A2216",
+  paperMuted: "#6B5A3E",
+  panel: "#20301F",         // forest panel
+  panelBorder: "#3C5138",
+  panelBorderLit: "#5B7A4F",
+  inputPaper: "#EAE0C6",
+  inputPanel: "#17241A",
+  cream: "#EFE6D2",
+  textMuted: "#94A98B",
+  sage: "#6F8D5B",           // primary — moss/sage
+  sageBright: "#A9C48C",
+  sageDeep: "#3E5A34",
+  clay: "#BD7A45",           // terracotta — secondary
+  clayDeep: "#8B5327",
+  clayBright: "#E0A468",
+  gold: "#CDA35C",           // harvest gold — tertiary accent
+  errorBg: "#331D14",
+  errorBorder: "#8B4A2C",
+  errorText: "#E3A47E",
+  successBg: "#1E2E1D",
+  successBorder: "#5B7A4F",
+  successText: "#B7CE9E",
 };
 
 const GlobalStyle = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap');
 
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(14px); }
+    * { box-sizing: border-box; }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    @keyframes fadeIn {
+    @keyframes softIn {
       from { opacity: 0; }
       to   { opacity: 1; }
     }
-    .at-fade-in { animation: fadeInUp 0.55s cubic-bezier(0.16,1,0.3,1) both; }
-    .at-fade-in-1 { animation-delay: 0.05s; }
-    .at-fade-in-2 { animation-delay: 0.12s; }
-    .at-fade-in-3 { animation-delay: 0.2s; }
+    @keyframes swaySprig {
+      0%, 100% { transform: rotate(-2.5deg); }
+      50%      { transform: rotate(2.5deg); }
+    }
+    @keyframes growVine {
+      from { transform: scaleY(0); }
+      to   { transform: scaleY(1); }
+    }
+    @keyframes budPop {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes tagSwing {
+      0%, 100% { transform: rotate(-1.4deg); }
+      50%      { transform: rotate(1.4deg); }
+    }
+    @keyframes shimmerSeal {
+      0%   { background-position: -120px 0; }
+      100% { background-position: 220px 0; }
+    }
+    @keyframes stampDown {
+      0%   { transform: scale(1) rotate(0deg); }
+      40%  { transform: scale(0.93) rotate(-1deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    @keyframes pillGlide {
+      from { opacity: 0.4; }
+      to   { opacity: 1; }
+    }
+    @keyframes floatSpore {
+      0%   { transform: translateY(0) translateX(0); opacity: 0; }
+      10%  { opacity: 0.5; }
+      90%  { opacity: 0.35; }
+      100% { transform: translateY(-90px) translateX(6px); opacity: 0; }
+    }
 
-    .at-btn { transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.15s ease; }
-    .at-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.35); filter: brightness(1.06); }
-    .at-btn:active:not(:disabled) { transform: translateY(0px); }
+    .at-root { position: relative; isolation: isolate; }
+    .at-grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      opacity: 0.05; mix-blend-mode: overlay;
+    }
+    .at-canopy-glow {
+      position: fixed; top: -20%; left: 50%; width: 1100px; height: 700px;
+      transform: translateX(-50%); pointer-events: none; z-index: 0;
+      background: radial-gradient(ellipse at center, rgba(111,141,91,0.16) 0%, rgba(111,141,91,0) 70%);
+    }
 
-    .at-batch-card { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.2s ease; animation: fadeInUp 0.4s ease both; }
-    .at-batch-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(0,0,0,0.3); }
+    .at-in       { animation: riseIn 0.6s cubic-bezier(0.16,1,0.3,1) both; }
+    .at-in-1     { animation-delay: 0.06s; }
+    .at-in-2     { animation-delay: 0.14s; }
+    .at-in-3     { animation-delay: 0.22s; }
+    .at-fade     { animation: softIn 0.5s ease both; }
 
-    .at-input { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-    .at-input:focus { outline: none; border-color: #A4B69A !important; box-shadow: 0 0 0 3px rgba(164,182,154,0.25); }
+    .at-sprig { transform-origin: bottom center; animation: swaySprig 6s ease-in-out infinite; display: inline-block; }
 
-    .at-timeline-item { animation: fadeIn 0.5s ease both; }
+    .at-btn {
+      position: relative; overflow: hidden;
+      transition: transform 0.16s ease, box-shadow 0.22s ease, filter 0.16s ease;
+    }
+    .at-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.4); filter: brightness(1.08); }
+    .at-btn:active:not(:disabled) { animation: stampDown 0.32s ease; }
+    .at-btn:disabled { opacity: 0.7; cursor: default; }
+
+    .at-input {
+      transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+    }
+    .at-input:focus { outline: none; border-color: #A9C48C !important; box-shadow: 0 0 0 3px rgba(169,196,140,0.22); }
+
+    .at-tab-track {
+      position: relative; display: inline-flex; background: #17241A;
+      border: 1px solid #3C5138; border-radius: 999px; padding: 4px; gap: 2px;
+    }
+    .at-tab-pill {
+      position: absolute; top: 4px; bottom: 4px; border-radius: 999px;
+      background: linear-gradient(135deg, #6F8D5B, #4E6B3F);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+      transition: transform 0.32s cubic-bezier(0.16,1,0.3,1), width 0.32s cubic-bezier(0.16,1,0.3,1);
+      animation: pillGlide 0.32s ease both;
+    }
+    .at-tab-btn {
+      position: relative; z-index: 1; border: none; background: transparent; cursor: pointer;
+      padding: 0.5rem 1rem; font-family: 'Work Sans', sans-serif; font-weight: 600; font-size: 0.86rem;
+      color: #94A98B; transition: color 0.22s ease; white-space: nowrap;
+    }
+    .at-tab-btn.active { color: #F3EBD8; }
+
+    .at-tag-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      animation: riseIn 0.45s cubic-bezier(0.16,1,0.3,1) both;
+      position: relative;
+    }
+    .at-tag-card:hover { transform: translateY(-3px) rotate(-0.3deg); box-shadow: 0 14px 30px rgba(0,0,0,0.38); }
+    .at-tag-card::before {
+      content: ""; position: absolute; left: -7px; top: 50%; transform: translateY(-50%);
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #14201A; border: 1px solid inherit;
+    }
+
+    .at-seal {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Fraunces', serif; font-weight: 700; font-size: 0.95rem;
+      flex-shrink: 0; animation: budPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+      border: 1.5px dashed currentColor;
+    }
+
+    .at-tag-hang {
+      animation: tagSwing 5s ease-in-out infinite;
+      transform-origin: top center;
+    }
+
+    .at-vine {
+      position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px;
+      background: linear-gradient(180deg, #E0A468, #6F8D5B);
+      transform-origin: top; animation: growVine 0.7s cubic-bezier(0.16,1,0.3,1) both;
+      border-radius: 2px;
+    }
+    .at-node {
+      position: absolute; left: 0; width: 12px; height: 12px; border-radius: 50%;
+      background: #E0A468; border: 2px solid #16241C;
+      animation: budPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    .at-banner { animation: riseIn 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+
+    .at-select {
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23A9C48C'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.9rem center;
+      padding-right: 2.2rem !important;
+    }
+
+    ::selection { background: #6F8D5B; color: #16241C; }
   `}</style>
 );
+
+const GrainOverlay = () => (
+  <svg className="at-grain" xmlns="http://www.w3.org/2000/svg">
+    <filter id="at-noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+    <rect width="100%" height="100%" filter="url(#at-noise)" />
+  </svg>
+);
+
+const SprigIcon = () => (
+  <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="at-sprig">
+    <path d="M15 27V9" stroke="#A9C48C" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M15 14C11 14 8 11 8 6c5 0 8 3 8 8 4-5 2-9 2-9 4 3 3 8 -1 11" stroke="#E0A468" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="15" cy="9" r="1.6" fill="#CDA35C" />
+  </svg>
+);
+
+const LEAF_ROLES = ["Farmer", "Distributor", "Retailer", "Consumer"] as const;
+type Role = (typeof LEAF_ROLES)[number];
+
+const ROLE_LABELS: Record<Role, string> = {
+  Farmer: "Farmer",
+  Distributor: "Distributor",
+  Retailer: "Retailer",
+  Consumer: "Consumer",
+};
 
 export const App: React.FC = () => {
   // Batch Form State
@@ -81,11 +235,14 @@ export const App: React.FC = () => {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<SupplyChainEvent[]>([]);
-  const [role, setRole] = useState<"Farmer" | "Distributor" | "Retailer" | "Consumer">("Farmer");
+  const [role, setRole] = useState<Role>("Farmer");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  const tabTrackRef = useRef<HTMLDivElement>(null);
+  const [pillStyle, setPillStyle] = useState<{ left: number; width: number }>({ left: 4, width: 0 });
 
   const getAvailableStatuses = () => {
     switch (role) {
@@ -143,6 +300,16 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const track = tabTrackRef.current;
+    if (!track) return;
+    const idx = LEAF_ROLES.indexOf(role);
+    const btn = track.children[idx] as HTMLElement | undefined;
+    if (btn) {
+      setPillStyle({ left: btn.offsetLeft, width: btn.offsetWidth });
+    }
+  }, [role]);
+
   const handleRegisterBatch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!batchId || !productName || !farmName) return;
@@ -158,7 +325,7 @@ export const App: React.FC = () => {
         farmOrigin: originLocation ? `${farmName}, ${originLocation}` : farmName,
       });
 
-      setSuccessMsg(`Batch "${batchId}" registered on-chain!`);
+      setSuccessMsg(`Batch "${batchId}" registered on-chain.`);
       setBatchId("");
       setProductName("");
       setVariety("");
@@ -188,7 +355,7 @@ export const App: React.FC = () => {
         notes: eventNotes,
       });
 
-      setSuccessMsg(`Supply chain event logged for ${selectedBatchId}!`);
+      setSuccessMsg(`Event logged for ${selectedBatchId}.`);
       setEventLocation("");
       setEventNotes("");
       await handleSelectBatch(selectedBatchId);
@@ -204,70 +371,147 @@ export const App: React.FC = () => {
     : "";
 
   return (
-    <div style={{ backgroundColor: palette.bg, color: palette.textCream, minHeight: "100vh", fontFamily: "'Work Sans', sans-serif", padding: "2rem" }}>
+    <div
+      className="at-root"
+      style={{
+        background: `linear-gradient(160deg, ${palette.soilTop} 0%, ${palette.soilTop} 40%, ${palette.soilBottom} 100%)`,
+        color: palette.cream,
+        minHeight: "100vh",
+        fontFamily: "'Work Sans', sans-serif",
+        padding: "2rem",
+      }}
+    >
       <GlobalStyle />
-      <header className="at-fade-in" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `2px solid ${palette.bgHeaderBorder}`, paddingBottom: "1rem", maxWidth: "1100px", margin: "0 auto 2rem auto" }}>
-        <h2 style={{ margin: 0, color: palette.textCream, fontFamily: "'Fraunces', serif", fontWeight: 600, letterSpacing: "0.01em" }}>🌾 Agri-Traceability Dashboard</h2>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <label style={{ fontSize: "0.9rem", color: palette.textMuted }}>Active Role:</label>
-          <select value={role} onChange={(e: any) => setRole(e.target.value)} className="at-input" style={{ padding: "0.4rem 0.8rem", borderRadius: "6px", backgroundColor: palette.darkCard, color: palette.greenBright, fontWeight: 600, border: `1px solid ${palette.darkCardBorder}`, cursor: "pointer" }}>
-            <option value="Farmer">Farmer</option>
-            <option value="Distributor">Distributor / Logistics</option>
-            <option value="Retailer">Retailer</option>
-            <option value="Consumer">Consumer</option>
-          </select>
+      <GrainOverlay />
+      <div className="at-canopy-glow" />
+
+      <header
+        className="at-in"
+        style={{
+          position: "relative", zIndex: 1,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          borderBottom: `1px solid ${palette.headerBorder}`, paddingBottom: "1.25rem",
+          maxWidth: "1120px", margin: "0 auto 2.25rem auto",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <SprigIcon />
+          <h1 style={{ margin: 0, color: palette.cream, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.5rem", letterSpacing: "0.005em" }}>
+            Agri-Traceability Ledger
+          </h1>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <span style={{ fontSize: "0.82rem", color: palette.textMuted }}>Viewing as</span>
+          <div className="at-tab-track" ref={tabTrackRef}>
+            <div className="at-tab-pill" style={{ left: pillStyle.left, width: pillStyle.width }} />
+            {LEAF_ROLES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`at-tab-btn ${role === r ? "active" : ""}`}
+                onClick={() => setRole(r)}
+              >
+                {ROLE_LABELS[r]}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
-        {error && <div className="at-fade-in" style={{ backgroundColor: palette.errorBg, color: palette.errorText, padding: "0.75rem", borderRadius: "8px", marginBottom: "1.5rem", border: `1px solid ${palette.rust}` }}>{error}</div>}
-        {successMsg && <div className="at-fade-in" style={{ backgroundColor: palette.successBg, color: palette.successText, padding: "0.75rem", borderRadius: "8px", marginBottom: "1.5rem", border: `1px solid ${palette.green}` }}>{successMsg}</div>}
+      <div style={{ maxWidth: "1120px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        {error && (
+          <div
+            className="at-banner"
+            style={{
+              backgroundColor: palette.errorBg, color: palette.errorText, padding: "0.85rem 1.1rem",
+              borderRadius: "10px", marginBottom: "1.5rem", border: `1px solid ${palette.errorBorder}`,
+              display: "flex", alignItems: "center", gap: "0.6rem", fontSize: "0.92rem",
+            }}
+          >
+            <span>⚠</span>{error}
+          </div>
+        )}
+        {successMsg && (
+          <div
+            className="at-banner"
+            style={{
+              backgroundColor: palette.successBg, color: palette.successText, padding: "0.85rem 1.1rem",
+              borderRadius: "10px", marginBottom: "1.5rem", border: `1px solid ${palette.successBorder}`,
+              display: "flex", alignItems: "center", gap: "0.6rem", fontSize: "0.92rem",
+            }}
+          >
+            <span>✓</span>{successMsg}
+          </div>
+        )}
 
-        <div style={{ display: "grid", gridTemplateColumns: role === "Consumer" ? "1fr" : "1fr 1fr", gap: "2rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: role === "Consumer" ? "1fr" : "0.95fr 1.15fr", gap: "1.75rem" }}>
 
           {/* Action Column */}
           {role !== "Consumer" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               {role === "Farmer" && (
-                <div className="at-fade-in at-fade-in-1" style={{ backgroundColor: palette.card, color: palette.cardText, padding: "1.75rem", borderRadius: "12px", boxShadow: "0 6px 20px rgba(0,0,0,0.28)" }}>
-                  <h3 style={{ marginTop: 0, color: palette.cardText, fontFamily: "'Fraunces', serif", fontWeight: 600 }}>Register Batch (Farmer)</h3>
+                <div
+                  className="at-in at-in-1"
+                  style={{
+                    backgroundColor: palette.paper, color: palette.paperText, padding: "1.85rem",
+                    borderRadius: "6px 22px 6px 22px", boxShadow: "0 12px 28px rgba(0,0,0,0.32)",
+                    border: "1px solid rgba(0,0,0,0.06)",
+                  }}
+                >
+                  <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: palette.paperText, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.15rem" }}>
+                    Register a new batch
+                  </h3>
                   <form onSubmit={handleRegisterBatch} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     <input className="at-input" type="text" placeholder="Batch ID (e.g. MANGO-2026-0002)" value={batchId} onChange={(e) => setBatchId(e.target.value)} style={inputStyle} />
-                    <input className="at-input" type="text" placeholder="Product Name (e.g. Mango)" value={productName} onChange={(e) => setProductName(e.target.value)} style={inputStyle} />
+                    <input className="at-input" type="text" placeholder="Product name (e.g. Mango)" value={productName} onChange={(e) => setProductName(e.target.value)} style={inputStyle} />
                     <input className="at-input" type="text" placeholder="Variety (e.g. Alphonso)" value={variety} onChange={(e) => setVariety(e.target.value)} style={inputStyle} />
-                    <input className="at-input" type="text" placeholder="Farm Name" value={farmName} onChange={(e) => setFarmName(e.target.value)} style={inputStyle} />
-                    <input className="at-input" type="text" placeholder="Origin Location" value={originLocation} onChange={(e) => setOriginLocation(e.target.value)} style={inputStyle} />
-                    <button type="submit" disabled={submitting} className="at-btn" style={{ backgroundColor: palette.green, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem" }}>
-                      {submitting ? "Mining Block..." : "Register Batch On-Chain"}
+                    <input className="at-input" type="text" placeholder="Farm name" value={farmName} onChange={(e) => setFarmName(e.target.value)} style={inputStyle} />
+                    <input className="at-input" type="text" placeholder="Origin location" value={originLocation} onChange={(e) => setOriginLocation(e.target.value)} style={inputStyle} />
+                    <button
+                      type="submit" disabled={submitting} className="at-btn"
+                      style={{ backgroundColor: palette.sage, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem", marginTop: "0.35rem" }}
+                    >
+                      {submitting ? "Writing to the ledger…" : "Register batch"}
                     </button>
                   </form>
                 </div>
               )}
 
-              <div className="at-fade-in at-fade-in-2" style={{ backgroundColor: palette.darkCard, border: `1px solid ${palette.darkCardBorder}`, padding: "1.75rem", borderRadius: "12px" }}>
-                <h3 style={{ marginTop: 0, color: palette.greenBright, fontFamily: "'Fraunces', serif", fontWeight: 600 }}>
-                  {selectedBatchId ? `Log Event: ${selectedBatchId}` : "Select a Batch to Log Event"}
+              <div
+                className="at-in at-in-2"
+                style={{ backgroundColor: palette.panel, border: `1px solid ${palette.panelBorder}`, padding: "1.85rem", borderRadius: "22px 6px 22px 6px" }}
+              >
+                <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: palette.sageBright, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.15rem" }}>
+                  {selectedBatchId ? `Log an event for ${selectedBatchId}` : "Log a supply chain event"}
                 </h3>
                 {selectedBatchId ? (
                   <form onSubmit={handleAddEvent} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     <input className="at-input" type="text" placeholder="Location (e.g. Mumbai Port, Store #14)" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} style={darkInputStyle} />
 
                     <div>
-                      <label style={{ fontSize: "0.8rem", color: palette.textMuted, display: "block", marginBottom: "0.25rem" }}>Allowed Status ({role}):</label>
-                      <select className="at-input" value={eventStatus} onChange={(e) => setEventStatus(e.target.value)} style={darkInputStyle}>
+                      <label style={{ fontSize: "0.8rem", color: palette.textMuted, display: "block", marginBottom: "0.3rem" }}>
+                        Status available to {ROLE_LABELS[role]}
+                      </label>
+                      <select className="at-input at-select" value={eventStatus} onChange={(e) => setEventStatus(e.target.value)} style={darkInputStyle}>
                         {getAvailableStatuses().map((st) => (
                           <option key={st} value={st}>{st}</option>
                         ))}
                       </select>
                     </div>
 
-                    <input className="at-input" type="text" placeholder="Notes / Sensor Data" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} style={darkInputStyle} />
-                    <button type="submit" disabled={submitting} className="at-btn" style={{ backgroundColor: palette.rust, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem" }}>
-                      {submitting ? "Mining Event..." : `Log ${role} Event`}
+                    <input className="at-input" type="text" placeholder="Notes or sensor data" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} style={darkInputStyle} />
+                    <button
+                      type="submit" disabled={submitting} className="at-btn"
+                      style={{ backgroundColor: palette.clay, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem", marginTop: "0.35rem" }}
+                    >
+                      {submitting ? "Sealing event…" : `Log ${ROLE_LABELS[role]} event`}
                     </button>
                   </form>
                 ) : (
-                  <p style={{ color: palette.textMuted, fontSize: "0.9rem" }}>Select any batch from the list on the right to log an update for this role.</p>
+                  <p style={{ color: palette.textMuted, fontSize: "0.92rem", lineHeight: 1.6 }}>
+                    Select a batch from the list to log an update for this role.
+                  </p>
                 )}
               </div>
             </div>
@@ -277,81 +521,121 @@ export const App: React.FC = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
             {role === "Consumer" && (
-              <div className="at-fade-in" style={{ backgroundColor: palette.green, color: "#fff", padding: "1.1rem", borderRadius: "10px" }}>
-                <h4 style={{ margin: "0 0 0.5rem 0", fontFamily: "'Fraunces', serif" }}>🔍 Consumer Verification View</h4>
-                <p style={{ margin: 0, fontSize: "0.9rem" }}>
-                  Scan product QR code or select a batch to inspect its immutable provenance timeline.
-                </p>
+              <div
+                className="at-in"
+                style={{
+                  background: `linear-gradient(135deg, ${palette.sage}, ${palette.sageDeep})`,
+                  color: "#fff", padding: "1.2rem 1.4rem", borderRadius: "12px",
+                  display: "flex", alignItems: "center", gap: "0.9rem",
+                }}
+              >
+                <span style={{ fontSize: "1.4rem" }}>🔍</span>
+                <div>
+                  <h4 style={{ margin: "0 0 0.25rem 0", fontFamily: "'Fraunces', serif", fontSize: "1.05rem" }}>Trace what you're eating</h4>
+                  <p style={{ margin: 0, fontSize: "0.88rem", opacity: 0.92 }}>
+                    Scan the tag on your product, or pick a batch below to see its full journey from field to shelf.
+                  </p>
+                </div>
               </div>
             )}
 
             {/* Batch List */}
-            <div className="at-fade-in at-fade-in-1">
-              <h3 style={{ marginTop: 0, color: palette.textCream, fontFamily: "'Fraunces', serif", fontWeight: 600 }}>Registered Batches</h3>
+            <div className="at-in at-in-1">
+              <h3 style={{ marginTop: 0, marginBottom: "0.9rem", color: palette.cream, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.15rem" }}>
+                Registered batches
+              </h3>
               {loading ? (
-                <p style={{ color: palette.textMuted }}>Loading smart contract state...</p>
+                <p style={{ color: palette.textMuted }}>Reading the ledger…</p>
               ) : batches.length === 0 ? (
-                <p style={{ color: palette.textMuted }}>No batches created yet.</p>
+                <p style={{ color: palette.textMuted }}>No batches registered yet.</p>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                  {batches.map((b, i) => (
-                    <div
-                      key={b.batchId}
-                      onClick={() => handleSelectBatch(b.batchId)}
-                      className="at-batch-card"
-                      style={{
-                        backgroundColor: selectedBatchId === b.batchId ? "#2A4436" : palette.darkCard,
-                        border: selectedBatchId === b.batchId ? `2px solid ${palette.greenBright}` : `1px solid ${palette.darkCardBorder}`,
-                        padding: "1rem",
-                        borderRadius: "10px",
-                        cursor: "pointer",
-                        animationDelay: `${i * 0.05}s`,
-                      }}
-                    >
-                      <h4 style={{ margin: "0 0 0.25rem 0", color: palette.greenBright, fontFamily: "'Fraunces', serif" }}>{b.batchId}</h4>
-                      <p style={{ margin: 0, fontSize: "0.9rem", color: palette.textCream }}>{b.cropName} — {b.farmOrigin}</p>
-                    </div>
-                  ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+                  {batches.map((b, i) => {
+                    const isActive = selectedBatchId === b.batchId;
+                    return (
+                      <div
+                        key={b.batchId}
+                        onClick={() => handleSelectBatch(b.batchId)}
+                        className="at-tag-card"
+                        style={{
+                          backgroundColor: isActive ? "#2C4426" : palette.panel,
+                          borderLeft: `3px solid ${isActive ? palette.gold : "transparent"}`,
+                          border: `1px solid ${isActive ? palette.panelBorderLit : palette.panelBorder}`,
+                          padding: "1rem 1.1rem", borderRadius: "6px 16px 6px 16px", cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: "0.9rem",
+                          animationDelay: `${i * 0.05}s`,
+                          color: isActive ? palette.gold : "inherit",
+                        }}
+                      >
+                        <div className="at-seal" style={{ color: isActive ? palette.gold : palette.sageBright }}>
+                          {b.cropName?.charAt(0)?.toUpperCase() || "?"}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <h4 style={{ margin: "0 0 0.2rem 0", color: isActive ? palette.gold : palette.sageBright, fontFamily: "'Fraunces', serif", fontSize: "1rem" }}>
+                            {b.batchId}
+                          </h4>
+                          <p style={{ margin: 0, fontSize: "0.88rem", color: palette.cream, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {b.cropName} — {b.farmOrigin}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
             {/* Selected Batch: Event Timeline & QR Code */}
             {selectedBatchId && (
-              <div className="at-fade-in at-fade-in-2" style={{ backgroundColor: palette.darkCard, padding: "1.4rem", borderRadius: "10px", border: `1px solid ${palette.darkCardBorder}` }}>
+              <div key={selectedBatchId} className="at-fade" style={{ backgroundColor: palette.panel, padding: "1.5rem", borderRadius: "16px 6px 16px 6px", border: `1px solid ${palette.panelBorder}` }}>
 
-                {/* QR Code Verification Card */}
-                <div style={{ backgroundColor: palette.card, color: palette.cardText, padding: "1.1rem", borderRadius: "10px", display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.4rem" }}>
-                  <QRCodeSVG value={currentVerificationUrl} size={110} level="M" />
-                  <div>
-                    <h4 style={{ margin: "0 0 0.25rem 0", color: palette.cardText, fontFamily: "'Fraunces', serif" }}>Consumer QR Tag</h4>
-                    <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.8rem", color: "#6B5842" }}>
-                      Scan code to verify origin and complete block history on mobile.
+                {/* QR Code Verification Card — shipping tag styling */}
+                <div
+                  className="at-tag-hang"
+                  style={{
+                    backgroundColor: palette.paper, color: palette.paperText, padding: "1.15rem",
+                    borderRadius: "8px", display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.5rem",
+                    backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(0,0,0,0.05) 8px, rgba(0,0,0,0.05) 9px)",
+                    backgroundSize: "100% 2px", backgroundRepeat: "no-repeat", backgroundPosition: "0 0",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.3)",
+                  }}
+                >
+                  <QRCodeSVG value={currentVerificationUrl} size={104} level="M" fgColor={palette.clayDeep} />
+                  <div style={{ minWidth: 0 }}>
+                    <h4 style={{ margin: "0 0 0.3rem 0", color: palette.paperText, fontFamily: "'Fraunces', serif", fontSize: "1.02rem" }}>
+                      Consumer tag
+                    </h4>
+                    <p style={{ margin: "0 0 0.55rem 0", fontSize: "0.82rem", color: palette.paperMuted, lineHeight: 1.5 }}>
+                      Scan to open the full origin story and event history on any phone.
                     </p>
-                    <code style={{ fontSize: "0.75rem", backgroundColor: palette.inputBgOnCream, padding: "0.2rem 0.4rem", borderRadius: "4px", color: palette.rust, wordBreak: "break-all" }}>
+                    <code style={{ fontSize: "0.72rem", backgroundColor: palette.inputPaper, padding: "0.25rem 0.45rem", borderRadius: "4px", color: palette.clayDeep, wordBreak: "break-all", display: "inline-block" }}>
                       {currentVerificationUrl}
                     </code>
                   </div>
                 </div>
 
                 {/* Timeline */}
-                <h4 style={{ marginTop: 0, borderBottom: `1px solid ${palette.darkCardBorder}`, paddingBottom: "0.5rem", color: palette.textCream, fontFamily: "'Fraunces', serif" }}>
-                  On-Chain Timeline: {selectedBatchId}
+                <h4 style={{ marginTop: 0, marginBottom: "1rem", paddingBottom: "0.6rem", borderBottom: `1px solid ${palette.panelBorder}`, color: palette.cream, fontFamily: "'Fraunces', serif", fontSize: "1.05rem" }}>
+                  Journey of {selectedBatchId}
                 </h4>
                 {selectedEvents.length === 0 ? (
-                  <p style={{ color: palette.textMuted, fontSize: "0.9rem" }}>No supply chain events logged yet.</p>
+                  <p style={{ color: palette.textMuted, fontSize: "0.9rem" }}>No events logged for this batch yet.</p>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    {selectedEvents.map((evt, idx) => (
-                      <div key={idx} className="at-timeline-item" style={{ borderLeft: `2px solid ${palette.rustSoft}`, paddingLeft: "0.75rem", animationDelay: `${idx * 0.06}s` }}>
-                        <p style={{ margin: 0, fontWeight: 700, color: palette.greenSoft, fontSize: "0.9rem" }}>{evt.status}</p>
-                        <p style={{ margin: "0.2rem 0", fontSize: "0.85rem", color: palette.textCream }}>📍 {evt.location}</p>
-                        <p style={{ margin: 0, fontSize: "0.8rem", color: palette.textMuted }}>📝 {evt.notes}</p>
-                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.7rem", color: "#8A7355" }}>
-                          Actor: {evt.actor ? `${evt.actor.substring(0, 6)}...${evt.actor.substring(evt.actor.length - 4)}` : "Verified Contract"}
-                        </p>
-                      </div>
-                    ))}
+                  <div style={{ position: "relative", paddingLeft: "1.9rem" }}>
+                    <div className="at-vine" />
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1.35rem" }}>
+                      {selectedEvents.map((evt, idx) => (
+                        <div key={idx} style={{ position: "relative" }}>
+                          <div className="at-node" style={{ left: "-1.9rem", top: "0.2rem", animationDelay: `${0.15 + idx * 0.12}s` }} />
+                          <p style={{ margin: 0, fontWeight: 700, color: palette.sageBright, fontSize: "0.92rem" }}>{evt.status}</p>
+                          <p style={{ margin: "0.25rem 0", fontSize: "0.86rem", color: palette.cream }}>📍 {evt.location}</p>
+                          <p style={{ margin: 0, fontSize: "0.82rem", color: palette.textMuted }}>{evt.notes}</p>
+                          <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.72rem", color: palette.gold }}>
+                            {evt.actor ? `${evt.actor.substring(0, 6)}…${evt.actor.substring(evt.actor.length - 4)}` : "Verified contract"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -364,7 +648,13 @@ export const App: React.FC = () => {
   );
 };
 
-const inputStyle: React.CSSProperties = { width: "100%", padding: "0.7rem", borderRadius: "6px", border: "1px solid #C9B896", backgroundColor: "#EDE6D2", color: "#2E2A1F", boxSizing: "border-box", fontFamily: "'Work Sans', sans-serif" };
-const darkInputStyle: React.CSSProperties = { width: "100%", padding: "0.7rem", borderRadius: "6px", border: "1px solid #4F6339", backgroundColor: "#182620", color: "#EDE8D9", boxSizing: "border-box", fontFamily: "'Work Sans', sans-serif" };
+const inputStyle: React.CSSProperties = {
+  width: "100%", padding: "0.75rem 0.85rem", borderRadius: "8px", border: "1px solid #C9B896",
+  backgroundColor: "#EAE0C6", color: "#2A2216", boxSizing: "border-box", fontFamily: "'Work Sans', sans-serif", fontSize: "0.92rem",
+};
+const darkInputStyle: React.CSSProperties = {
+  width: "100%", padding: "0.75rem 0.85rem", borderRadius: "8px", border: "1px solid #3C5138",
+  backgroundColor: "#17241A", color: "#EFE6D2", boxSizing: "border-box", fontFamily: "'Work Sans', sans-serif", fontSize: "0.92rem",
+};
 
 export default App;
