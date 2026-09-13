@@ -9,6 +9,14 @@ import {
   type SupplyChainEvent,
 } from "./services/api";
 
+// ---- Background photography ----
+// Homepage: golden wheat field at harvest. Dashboard: colorful produce in wooden crates.
+// Both free-to-use Unsplash photos, different scenes but the same warm harvest mood.
+const HOME_BG_URL =
+  "https://images.unsplash.com/photo-1635176490410-5116fc497d45?q=80&w=2400&auto=format&fit=crop";
+const DASHBOARD_BG_URL =
+  "https://images.unsplash.com/photo-1632776350300-11016768b521?q=80&w=2400&auto=format&fit=crop";
+
 // ---- Earthy palette: soil, canopy, bark, clay, and a few accent minerals ----
 const palette = {
   soilTop: "#16241C",       // deep canopy green (background gradient top)
@@ -42,6 +50,8 @@ const palette = {
   teal: "#33584C",           // deep teal-green (slate of the forest)
   tealBright: "#7FA396",
   ochre: "#C9A227",          // warm mustard/ochre
+  plum: "#5B3A52",           // dusty plum — extra color accent for richness
+  plumBright: "#9C7593",
   errorBg: "#331D14",
   errorBorder: "#8B4A2C",
   errorText: "#E3A47E",
@@ -59,7 +69,7 @@ const ROLE_ACCENT: Record<string, { base: string; deep: string }> = {
 
 const GlobalStyle = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap');
 
     * { box-sizing: border-box; }
 
@@ -84,10 +94,6 @@ const GlobalStyle = () => (
       60%  { transform: scale(1.25); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
     }
-    @keyframes shimmerSeal {
-      0%   { background-position: -120px 0; }
-      100% { background-position: 220px 0; }
-    }
     @keyframes stampDown {
       0%   { transform: scale(1) rotate(0deg); }
       40%  { transform: scale(0.93) rotate(-1deg); }
@@ -106,27 +112,23 @@ const GlobalStyle = () => (
       from { opacity: 0; transform: translateY(10px) scale(0.97); }
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
-    @keyframes floatSpore {
-      0%   { transform: translateY(0) translateX(0); opacity: 0; }
-      10%  { opacity: 0.5; }
-      90%  { opacity: 0.35; }
-      100% { transform: translateY(-90px) translateX(6px); opacity: 0; }
-    }
 
     .at-root { position: relative; isolation: isolate; }
     .at-backdrop-photo {
       position: fixed; inset: 0; z-index: -3; pointer-events: none;
-      background-image: url('https://images.unsplash.com/photo-1757338409748-35a566416113?fm=jpg&q=70&w=2400&auto=format&fit=crop');
-      background-size: cover; background-position: center; filter: saturate(0.75) brightness(0.92);
+      background-size: cover; background-position: center;
+      filter: saturate(0.9) brightness(0.9) contrast(1.05);
+      transition: background-image 0.4s ease;
     }
     .at-backdrop-scrim {
       position: fixed; inset: 0; z-index: -2; pointer-events: none;
       background:
-        radial-gradient(ellipse 900px 640px at 12% -8%, rgba(74,53,36,0.36) 0%, rgba(74,53,36,0) 60%),
-        radial-gradient(ellipse 800px 620px at 108% 18%, rgba(51,88,76,0.30) 0%, rgba(51,88,76,0) 62%),
-        radial-gradient(ellipse 900px 700px at 90% 108%, rgba(107,74,49,0.34) 0%, rgba(107,74,49,0) 62%),
-        radial-gradient(ellipse 800px 620px at 4% 100%, rgba(42,30,20,0.4) 0%, rgba(42,30,20,0) 65%),
-        linear-gradient(160deg, rgba(22,36,28,0.93) 0%, rgba(22,36,28,0.88) 38%, rgba(27,20,13,0.94) 100%);
+        radial-gradient(ellipse 900px 640px at 10% -8%, rgba(91,58,82,0.28) 0%, rgba(91,58,82,0) 60%),
+        radial-gradient(ellipse 800px 620px at 108% 14%, rgba(51,88,76,0.32) 0%, rgba(51,88,76,0) 62%),
+        radial-gradient(ellipse 900px 700px at 92% 108%, rgba(166,93,52,0.28) 0%, rgba(166,93,52,0) 62%),
+        radial-gradient(ellipse 800px 620px at 2% 102%, rgba(42,30,20,0.42) 0%, rgba(42,30,20,0) 65%),
+        radial-gradient(ellipse 700px 500px at 50% 50%, rgba(201,162,39,0.08) 0%, rgba(201,162,39,0) 70%),
+        linear-gradient(160deg, rgba(22,36,28,0.92) 0%, rgba(22,36,28,0.86) 38%, rgba(27,20,13,0.93) 100%);
     }
     .at-grain {
       position: fixed; inset: 0; pointer-events: none; z-index: -1;
@@ -143,11 +145,14 @@ const GlobalStyle = () => (
       background: radial-gradient(ellipse at center, rgba(107,74,49,0.18) 0%, rgba(107,74,49,0) 68%);
     }
 
-    .at-in       { animation: riseIn 0.6s cubic-bezier(0.16,1,0.3,1) both; }
-    .at-in-1     { animation-delay: 0.06s; }
-    .at-in-2     { animation-delay: 0.14s; }
-    .at-in-3     { animation-delay: 0.22s; }
-    .at-fade     { animation: softIn 0.5s ease both; }
+    /* riseIn / fade elements: will-change + a minimum non-zero delay prevents a
+       known browser quirk where CSS animations on freshly-mounted nodes inside
+       a grid can get stuck at their 0% frame (invisible) on first paint. */
+    .at-in       { animation: riseIn 0.6s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.02s; will-change: opacity, transform; }
+    .at-in-1     { animation-delay: 0.08s; }
+    .at-in-2     { animation-delay: 0.16s; }
+    .at-in-3     { animation-delay: 0.24s; }
+    .at-fade     { animation: softIn 0.5s ease both; animation-delay: 0.02s; will-change: opacity; }
 
     .at-sprig { transform-origin: bottom center; animation: swaySprig 6s ease-in-out infinite; display: inline-block; }
 
@@ -176,7 +181,7 @@ const GlobalStyle = () => (
     }
     .at-tab-btn {
       position: relative; z-index: 1; border: none; background: transparent; cursor: pointer;
-      padding: 0.5rem 1rem; font-family: 'Work Sans', sans-serif; font-weight: 600; font-size: 0.86rem;
+      padding: 0.5rem 1rem; font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 0.86rem;
       color: #94A98B; transition: color 0.22s ease; white-space: nowrap;
     }
     .at-tab-btn.active { color: #F3EBD8; }
@@ -184,6 +189,8 @@ const GlobalStyle = () => (
     .at-tag-card {
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
       animation: riseIn 0.45s cubic-bezier(0.16,1,0.3,1) both;
+      animation-delay: 0.02s;
+      will-change: opacity, transform;
       position: relative;
     }
     .at-tag-card:hover { transform: translateY(-3px) rotate(-0.3deg); box-shadow: 0 14px 30px rgba(0,0,0,0.38); }
@@ -196,11 +203,10 @@ const GlobalStyle = () => (
     .at-seal {
       width: 34px; height: 34px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-family: 'Fraunces', serif; font-weight: 700; font-size: 0.95rem;
+      font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 1.05rem;
       flex-shrink: 0; animation: budPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
       border: 1.5px dashed currentColor;
     }
-
 
     .at-vine {
       position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px;
@@ -214,10 +220,12 @@ const GlobalStyle = () => (
       animation: budPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
     }
 
-    .at-banner { animation: riseIn 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+    .at-banner { animation: riseIn 0.4s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.02s; will-change: opacity, transform; }
 
     .at-tag-static {
       animation: tagRise 0.5s cubic-bezier(0.16,1,0.3,1) both;
+      animation-delay: 0.02s;
+      will-change: opacity, transform;
     }
     .at-qr-wrap { position: relative; display: inline-flex; border-radius: 14px; }
     .at-qr-ring {
@@ -282,10 +290,10 @@ const HomeView: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
       <SprigIcon />
     </div>
 
-    <h1 className="at-in at-in-1" style={{ margin: "0 0 0.6rem 0", color: palette.cream, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "2.6rem", letterSpacing: "0.005em" }}>
+    <h1 className="at-in at-in-1" style={{ margin: "0 0 0.6rem 0", color: palette.cream, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "3rem", letterSpacing: "0.005em" }}>
       Harvest Trail
     </h1>
-    <p className="at-in at-in-1" style={{ margin: "0 auto 3rem auto", maxWidth: "440px", color: palette.textMuted, fontSize: "1rem", lineHeight: 1.6 }}>
+    <p className="at-in at-in-1" style={{ margin: "0 auto 3rem auto", maxWidth: "440px", color: palette.textMuted, fontSize: "1rem", lineHeight: 1.6, fontFamily: "'Manrope', sans-serif" }}>
       A shared ledger for tracing food from field to shelf — logged by the people who grow, move, and sell it.
     </p>
 
@@ -293,8 +301,8 @@ const HomeView: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
       <LeafOrnament />
       <p style={{
         margin: "1.1rem auto 0 auto", maxWidth: "600px", color: palette.cream,
-        fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 500,
-        fontSize: "1.6rem", lineHeight: 1.55,
+        fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontWeight: 600,
+        fontSize: "1.75rem", lineHeight: 1.5,
       }}>
         Every crate has a route, and every route has a story — from the hands that grew it to the ones who bring it home.
       </p>
@@ -305,7 +313,7 @@ const HomeView: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
       style={{
         backgroundColor: palette.sage, color: "#fff", padding: "0.9rem 2.1rem", border: "none",
         borderRadius: "999px", fontWeight: 600, cursor: "pointer", fontSize: "0.98rem",
-        fontFamily: "'Work Sans', sans-serif", marginBottom: "3.5rem",
+        fontFamily: "'Manrope', sans-serif", marginBottom: "3.5rem",
       }}
     >
       Enter the ledger
@@ -323,11 +331,11 @@ const HomeView: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
             <div style={{
               width: 38, height: 38, borderRadius: "50%", backgroundColor: palette.panel,
               border: `2px solid ${ROLE_ACCENT[r].base}`, display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "'Fraunces', serif", fontWeight: 700, color: ROLE_ACCENT[r].base, fontSize: "0.95rem",
+              fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, color: ROLE_ACCENT[r].base, fontSize: "1.05rem",
             }}>
               {r.charAt(0)}
             </div>
-            <span style={{ fontSize: "0.78rem", color: palette.textMuted }}>{ROLE_LABELS[r]}</span>
+            <span style={{ fontSize: "0.78rem", color: palette.textMuted, fontFamily: "'Manrope', sans-serif" }}>{ROLE_LABELS[r]}</span>
           </div>
         ))}
       </div>
@@ -494,12 +502,12 @@ export const App: React.FC = () => {
       style={{
         color: palette.cream,
         minHeight: "100vh",
-        fontFamily: "'Work Sans', sans-serif",
+        fontFamily: "'Manrope', sans-serif",
         padding: "2rem",
       }}
     >
       <GlobalStyle />
-      <div className="at-backdrop-photo" />
+      <div className="at-backdrop-photo" style={{ backgroundImage: `url(${view === "home" ? HOME_BG_URL : DASHBOARD_BG_URL})` }} />
       <div className="at-backdrop-scrim" />
       <GrainOverlay />
       <div className="at-canopy-glow" />
@@ -520,7 +528,7 @@ export const App: React.FC = () => {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
           <SprigIcon />
-          <h1 style={{ margin: 0, color: palette.cream, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.5rem", letterSpacing: "0.005em" }}>
+          <h1 style={{ margin: 0, color: palette.cream, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.7rem", letterSpacing: "0.005em" }}>
             Harvest Trail
           </h1>
         </div>
@@ -577,17 +585,17 @@ export const App: React.FC = () => {
 
           {/* Action Column */}
           {role !== "Consumer" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", position: "relative", zIndex: 1 }}>
               {role === "Farmer" && (
                 <div
                   className="at-in at-in-1"
                   style={{
                     backgroundColor: palette.paper, color: palette.paperText, padding: "1.85rem",
                     borderRadius: "6px 22px 6px 22px", boxShadow: "0 12px 28px rgba(0,0,0,0.32)",
-                    border: "1px solid rgba(0,0,0,0.06)",
+                    border: "1px solid rgba(0,0,0,0.06)", position: "relative",
                   }}
                 >
-                  <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: palette.paperText, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.15rem" }}>
+                  <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: palette.paperText, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.35rem" }}>
                     Register a new batch
                   </h3>
                   <form onSubmit={handleRegisterBatch} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -610,7 +618,7 @@ export const App: React.FC = () => {
                 className="at-in at-in-2"
                 style={{ backgroundColor: palette.panel, border: `1px solid ${palette.panelBorder}`, borderLeft: `3px solid ${ROLE_ACCENT[role].base}`, padding: "1.85rem", borderRadius: "22px 6px 22px 6px" }}
               >
-                <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: ROLE_ACCENT[role].base, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.15rem" }}>
+                <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: ROLE_ACCENT[role].base, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.35rem" }}>
                   {selectedBatchId ? `Log an event for ${selectedBatchId}` : "Log a supply chain event"}
                 </h3>
                 {selectedBatchId ? (
@@ -660,7 +668,7 @@ export const App: React.FC = () => {
               >
                 <span style={{ fontSize: "1.4rem" }}>🔍</span>
                 <div>
-                  <h4 style={{ margin: "0 0 0.25rem 0", fontFamily: "'Fraunces', serif", fontSize: "1.05rem" }}>Trace what you're eating</h4>
+                  <h4 style={{ margin: "0 0 0.25rem 0", fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.15rem" }}>Trace what you're eating</h4>
                   <p style={{ margin: 0, fontSize: "0.88rem", opacity: 0.92 }}>
                     Scan the tag on your product, or pick a batch below to see its full journey from field to shelf.
                   </p>
@@ -670,7 +678,7 @@ export const App: React.FC = () => {
 
             {/* Batch List */}
             <div className="at-in at-in-1">
-              <h3 style={{ marginTop: 0, marginBottom: "0.9rem", color: palette.cream, fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "1.15rem" }}>
+              <h3 style={{ marginTop: 0, marginBottom: "0.9rem", color: palette.cream, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.35rem" }}>
                 Registered batches
               </h3>
               {loading ? (
@@ -692,7 +700,7 @@ export const App: React.FC = () => {
                           border: `1px solid ${isActive ? palette.panelBorderLit : palette.panelBorder}`,
                           padding: "1rem 1.1rem", borderRadius: "6px 16px 6px 16px", cursor: "pointer",
                           display: "flex", alignItems: "center", gap: "0.9rem",
-                          animationDelay: `${i * 0.05}s`,
+                          animationDelay: `${0.02 + i * 0.05}s`,
                           color: isActive ? palette.gold : "inherit",
                         }}
                       >
@@ -700,7 +708,7 @@ export const App: React.FC = () => {
                           {b.cropName?.charAt(0)?.toUpperCase() || "?"}
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <h4 style={{ margin: "0 0 0.2rem 0", color: isActive ? palette.gold : palette.sageBright, fontFamily: "'Fraunces', serif", fontSize: "1rem" }}>
+                          <h4 style={{ margin: "0 0 0.2rem 0", color: isActive ? palette.gold : palette.sageBright, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.1rem" }}>
                             {b.batchId}
                           </h4>
                           <p style={{ margin: 0, fontSize: "0.88rem", color: palette.cream, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -731,7 +739,7 @@ export const App: React.FC = () => {
                       border: `1px solid ${palette.tan}`,
                     }}
                   >
-                    <h4 style={{ margin: 0, color: palette.paperText, fontFamily: "'Fraunces', serif", fontSize: "1rem" }}>
+                    <h4 style={{ margin: 0, color: palette.paperText, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.1rem" }}>
                       Consumer tag
                     </h4>
                     <div className="at-qr-wrap">
@@ -752,7 +760,7 @@ export const App: React.FC = () => {
                 </div>
 
                 {/* Timeline */}
-                <h4 style={{ marginTop: 0, marginBottom: "1rem", paddingBottom: "0.6rem", borderBottom: `1px solid ${palette.panelBorder}`, color: palette.cream, fontFamily: "'Fraunces', serif", fontSize: "1.05rem" }}>
+                <h4 style={{ marginTop: 0, marginBottom: "1rem", paddingBottom: "0.6rem", borderBottom: `1px solid ${palette.panelBorder}`, color: palette.cream, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.2rem" }}>
                   Journey of {selectedBatchId}
                 </h4>
                 {selectedEvents.length === 0 ? (
@@ -789,11 +797,11 @@ export const App: React.FC = () => {
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "0.75rem 0.85rem", borderRadius: "8px", border: "1px solid #C9B896",
-  backgroundColor: "#EAE0C6", color: "#2A2216", boxSizing: "border-box", fontFamily: "'Work Sans', sans-serif", fontSize: "0.92rem",
+  backgroundColor: "#EAE0C6", color: "#2A2216", boxSizing: "border-box", fontFamily: "'Manrope', sans-serif", fontSize: "0.92rem",
 };
 const darkInputStyle: React.CSSProperties = {
   width: "100%", padding: "0.75rem 0.85rem", borderRadius: "8px", border: "1px solid #3C5138",
-  backgroundColor: "#17241A", color: "#EFE6D2", boxSizing: "border-box", fontFamily: "'Work Sans', sans-serif", fontSize: "0.92rem",
+  backgroundColor: "#17241A", color: "#EFE6D2", boxSizing: "border-box", fontFamily: "'Manrope', sans-serif", fontSize: "0.92rem",
 };
 
 export default App;
