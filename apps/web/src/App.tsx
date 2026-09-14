@@ -64,6 +64,7 @@ const ROLE_ACCENT: Record<string, { base: string; deep: string }> = {
   Farmer: { base: palette.sage, deep: palette.sageDeep },
   Distributor: { base: palette.sienna, deep: palette.siennaDeep },
   Retailer: { base: palette.ochre, deep: palette.clayDeep },
+  Regulator: { base: palette.plum, deep: "#3A2436" },
   Consumer: { base: palette.teal, deep: "#1E322B" },
 };
 
@@ -272,13 +273,14 @@ const SprigIcon = () => (
   </svg>
 );
 
-const LEAF_ROLES = ["Farmer", "Distributor", "Retailer", "Consumer"] as const;
+const LEAF_ROLES = ["Farmer", "Distributor", "Retailer", "Regulator", "Consumer"] as const;
 type Role = (typeof LEAF_ROLES)[number];
 
 const ROLE_LABELS: Record<Role, string> = {
   Farmer: "Farmer",
   Distributor: "Distributor",
   Retailer: "Retailer",
+  Regulator: "Regulator",
   Consumer: "Consumer",
 };
 
@@ -388,12 +390,26 @@ export const App: React.FC = () => {
       case "Distributor":
         return ["Picked Up", "In Transit", "Stored in Cold Storage", "Arrived at Regional Hub"];
       case "Retailer":
-        return ["Received at Store", "Quality Inspection Passed", "Stocked on Shelf"];
+        return ["Received at Store", "Quality Inspection Passed", "Quality Inspection Failed", "Stocked on Shelf"];
       default:
         return [];
     }
   };
 
+  // Regulator read-only helpers: derive a pass/fail/pending verdict and the
+  // most recent known location straight from the batch's own event log —
+  // no separate on-chain field needed, this is purely an oversight view.
+  const getQualityVerdict = (events: SupplyChainEvent[]): "Passed" | "Failed" | "Pending" => {
+    for (let i = events.length - 1; i >= 0; i--) {
+      const combined = `${events[i].status} ${events[i].notes}`.toLowerCase();
+      if (combined.includes("fail")) return "Failed";
+      if (combined.includes("quality") && combined.includes("pass")) return "Passed";
+    }
+    return "Pending";
+  };
+
+  const getCurrentLocation = (events: SupplyChainEvent[]): string =>
+    events.length > 0 ? events[events.length - 1].location : "Not yet logged";
   const loadBatches = async () => {
     setLoading(true);
     try {
@@ -639,6 +655,50 @@ export const App: React.FC = () => {
                 </div>
               )}
 
+              {role === "Regulator" ? (
+                <div
+                  className="at-in at-in-2"
+                  style={{ backgroundColor: palette.panel, border: `1px solid ${palette.panelBorder}`, borderLeft: `3px solid ${ROLE_ACCENT.Regulator.base}`, padding: "1.85rem", borderRadius: "22px 6px 22px 6px" }}
+                >
+                  <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: ROLE_ACCENT.Regulator.base, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.35rem" }}>
+                    {selectedBatchId ? `Compliance review: ${selectedBatchId}` : "Regulatory oversight"}
+                  </h3>
+                  {selectedBatchId ? (
+                    (() => {
+                      const verdict = getQualityVerdict(selectedEvents);
+                      const verdictColor = verdict === "Passed" ? palette.sageBright : verdict === "Failed" ? palette.errorText : palette.gold;
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                            <span style={{
+                              display: "inline-block", padding: "0.35rem 0.9rem", borderRadius: "999px",
+                              fontWeight: 700, fontSize: "0.85rem", color: verdict === "Pending" ? "#2A2216" : "#fff",
+                              backgroundColor: verdict === "Passed" ? palette.sageDeep : verdict === "Failed" ? palette.errorBorder : palette.gold,
+                            }}>
+                              Quality check: {verdict}
+                            </span>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: "0.78rem", color: palette.textMuted, display: "block", marginBottom: "0.2rem" }}>
+                              Current location
+                            </label>
+                            <p style={{ margin: 0, fontSize: "1rem", color: palette.cream, fontWeight: 600 }}>
+                              📍 {getCurrentLocation(selectedEvents)}
+                            </p>
+                          </div>
+                          <p style={{ margin: 0, fontSize: "0.85rem", color: palette.textMuted, lineHeight: 1.6 }}>
+                            Verdict is derived from the retailer's quality-check stage below. The full, tamper-evident log for this batch is shown to the right for audit.
+                          </p>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <p style={{ color: palette.textMuted, fontSize: "0.92rem", lineHeight: 1.6 }}>
+                      Select a batch from the list to review its quality-check verdict, current location, and full log history.
+                    </p>
+                  )}
+                </div>
+              ) : (
               <div
                 className="at-in at-in-2"
                 style={{ backgroundColor: palette.panel, border: `1px solid ${palette.panelBorder}`, borderLeft: `3px solid ${ROLE_ACCENT[role].base}`, padding: "1.85rem", borderRadius: "22px 6px 22px 6px" }}
@@ -682,6 +742,7 @@ export const App: React.FC = () => {
                   </p>
                 )}
               </div>
+              )}
             </div>
           )}
 
