@@ -359,11 +359,14 @@ export const App: React.FC = () => {
   const [variety, setVariety] = useState("");
   const [farmName, setFarmName] = useState("");
   const [originLocation, setOriginLocation] = useState("");
+  const [farmGatePrice, setFarmGatePrice] = useState("");
+  const [harvestQuantity, setHarvestQuantity] = useState("");
 
   // Event Form State
   const [eventLocation, setEventLocation] = useState("");
   const [eventStatus, setEventStatus] = useState("In Transit");
   const [eventNotes, setEventNotes] = useState("");
+  const [eventPrice, setEventPrice] = useState("");
 
   // UI State
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -456,6 +459,8 @@ export const App: React.FC = () => {
         batchId,
         cropName: variety ? `${productName} (${variety})` : productName,
         farmOrigin: originLocation ? `${farmName}, ${originLocation}` : farmName,
+        price: Number(farmGatePrice) || 0,
+        quantityKg: Number(harvestQuantity) || 0,
       });
 
       setSuccessMsg(`Batch "${batchId}" registered on-chain.`);
@@ -464,6 +469,8 @@ export const App: React.FC = () => {
       setVariety("");
       setFarmName("");
       setOriginLocation("");
+      setFarmGatePrice("");
+      setHarvestQuantity("");
       await loadBatches();
     } catch (err: any) {
       setError(err.message || "Failed to register batch");
@@ -486,11 +493,13 @@ export const App: React.FC = () => {
         location: eventLocation,
         status: eventStatus,
         notes: eventNotes,
+        price: Number(eventPrice) || 0,
       });
 
       setSuccessMsg(`Event logged for ${selectedBatchId}.`);
       setEventLocation("");
       setEventNotes("");
+      setEventPrice("");
       await handleSelectBatch(selectedBatchId);
     } catch (err: any) {
       setError(err.message || "Failed to add event");
@@ -498,6 +507,8 @@ export const App: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  const priceTrail = selectedEvents.filter((e) => e.price > 0).map((e) => ({ stage: e.status, price: e.price }));
 
   const currentVerificationUrl = selectedBatchId
     ? `${window.location.origin}/?batchId=${selectedBatchId}`
@@ -611,6 +622,8 @@ export const App: React.FC = () => {
                     <input className="at-input" type="text" placeholder="Variety (e.g. Alphonso)" value={variety} onChange={(e) => setVariety(e.target.value)} style={inputStyle} />
                     <input className="at-input" type="text" placeholder="Farm name" value={farmName} onChange={(e) => setFarmName(e.target.value)} style={inputStyle} />
                     <input className="at-input" type="text" placeholder="Origin location" value={originLocation} onChange={(e) => setOriginLocation(e.target.value)} style={inputStyle} />
+                    <input className="at-input" type="number" min="0" step="0.01" placeholder="Farm-gate price (₹ per kg)" value={farmGatePrice} onChange={(e) => setFarmGatePrice(e.target.value)} style={inputStyle} />
+                    <input className="at-input" type="number" min="0" step="0.01" placeholder="Quantity harvested (kg)" value={harvestQuantity} onChange={(e) => setHarvestQuantity(e.target.value)} style={inputStyle} />
                     <button
                       type="submit" disabled={submitting} className="at-btn"
                       style={{ backgroundColor: palette.sage, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem", marginTop: "0.35rem" }}
@@ -644,6 +657,13 @@ export const App: React.FC = () => {
                     </div>
 
                     <input className="at-input" type="text" placeholder="Notes or sensor data" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} style={darkInputStyle} />
+
+                    <div>
+                      <label style={{ fontSize: "0.8rem", color: palette.textMuted, display: "block", marginBottom: "0.3rem" }}>
+                        Price at this stage (₹ per kg)
+                      </label>
+                      <input className="at-input" type="number" min="0" step="0.01" placeholder="e.g. 32.50" value={eventPrice} onChange={(e) => setEventPrice(e.target.value)} style={darkInputStyle} />
+                    </div>
                     <button
                       type="submit" disabled={submitting} className="at-btn"
                       style={{ backgroundColor: ROLE_ACCENT[role].base, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem", marginTop: "0.35rem" }}
@@ -721,6 +741,11 @@ export const App: React.FC = () => {
                           <p style={{ margin: 0, fontSize: "0.88rem", color: palette.cream, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {b.cropName} — {b.farmOrigin}
                           </p>
+                          {b.price > 0 && (
+                            <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: palette.gold }}>
+                              {b.quantityKg > 0 ? `${b.quantityKg} kg — ` : ""}₹{b.price.toFixed(2)}/kg
+                            </p>
+                          )}
                         </div>
                       </div>
                     );
@@ -770,6 +795,25 @@ export const App: React.FC = () => {
                 <h4 style={{ marginTop: 0, marginBottom: "1rem", paddingBottom: "0.6rem", borderBottom: `1px solid ${palette.panelBorder}`, color: palette.cream, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.2rem" }}>
                   Journey of {selectedBatchId}
                 </h4>
+
+                {priceTrail.length > 0 && (
+                  <div style={{
+                    display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem",
+                    marginBottom: "1.25rem", padding: "0.75rem 1rem", borderRadius: "8px",
+                    backgroundColor: "#17241A", border: `1px solid ${palette.panelBorder}`,
+                  }}>
+                    <span style={{ fontSize: "0.78rem", color: palette.textMuted, marginRight: "0.25rem" }}>Price trail:</span>
+                    {priceTrail.map((p, i) => (
+                      <React.Fragment key={i}>
+                        <span style={{ fontSize: "0.85rem", color: palette.gold, fontWeight: 600 }}>
+                          {p.stage}: ₹{p.price.toFixed(2)}
+                        </span>
+                        {i < priceTrail.length - 1 && <span style={{ color: palette.textMuted }}>→</span>}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
+
                 {selectedEvents.length === 0 ? (
                   <p style={{ color: palette.textMuted, fontSize: "0.9rem" }}>No events logged for this batch yet.</p>
                 ) : (
@@ -782,6 +826,11 @@ export const App: React.FC = () => {
                           <p style={{ margin: 0, fontWeight: 700, color: palette.sageBright, fontSize: "0.92rem" }}>{evt.status}</p>
                           <p style={{ margin: "0.25rem 0", fontSize: "0.86rem", color: palette.cream }}>📍 {evt.location}</p>
                           <p style={{ margin: 0, fontSize: "0.82rem", color: palette.textMuted }}>{evt.notes}</p>
+                          {evt.price > 0 && (
+                            <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: palette.clayBright, fontWeight: 600 }}>
+                              ₹{evt.price.toFixed(2)}/kg at this stage
+                            </p>
+                          )}
                           <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.72rem", color: palette.gold }}>
                             {evt.actor ? `${evt.actor.substring(0, 6)}…${evt.actor.substring(evt.actor.length - 4)}` : "Verified contract"}
                           </p>
