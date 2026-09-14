@@ -417,6 +417,11 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleCloseBatch = () => {
+    setSelectedBatchId(null);
+    setSelectedEvents([]);
+  };
+
   useEffect(() => {
     loadBatches();
   }, []);
@@ -719,7 +724,8 @@ export const App: React.FC = () => {
                     return (
                       <div
                         key={b.batchId}
-                        onClick={() => handleSelectBatch(b.batchId)}
+                        onClick={() => (isActive ? handleCloseBatch() : handleSelectBatch(b.batchId))}
+                        title={isActive ? "Click to close" : "Click to view details"}
                         className="at-tag-card"
                         style={{
                           backgroundColor: isActive ? "#2C4426" : palette.panel,
