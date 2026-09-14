@@ -8,6 +8,8 @@ contract AgriTraceability {
         string farmOrigin;
         uint256 harvestTimestamp;
         address farmer;
+        uint256 price; // farm-gate price, recorded at registration
+        uint256 quantityGrams; // harvested quantity, in grams (supports decimal kg)
         bool exists;
     }
 
@@ -17,19 +19,22 @@ contract AgriTraceability {
         string status;
         address actor;
         string notes;
+        uint256 price; // price recorded at this stage (0 if not applicable)
     }
 
     mapping(string => Batch) private batches;
     mapping(string => SupplyChainEvent[]) private batchEvents;
     string[] private batchIds;
 
-    event BatchCreated(string indexed batchId, string cropName, address indexed farmer);
-    event EventAdded(string indexed batchId, string status, address indexed actor);
+    event BatchCreated(string indexed batchId, string cropName, address indexed farmer, uint256 price, uint256 quantityGrams);
+    event EventAdded(string indexed batchId, string status, address indexed actor, uint256 price);
 
     function createBatch(
         string memory _batchId,
         string memory _cropName,
-        string memory _farmOrigin
+        string memory _farmOrigin,
+        uint256 _price,
+        uint256 _quantityGrams
     ) external {
         require(!batches[_batchId].exists, "Batch ID already registered");
 
@@ -39,28 +44,32 @@ contract AgriTraceability {
             farmOrigin: _farmOrigin,
             harvestTimestamp: block.timestamp,
             farmer: msg.sender,
+            price: _price,
+            quantityGrams: _quantityGrams,
             exists: true
         });
 
         batchIds.push(_batchId);
 
-        // Record initial harvest event automatically
+        // Record initial harvest event automatically, including farm-gate price
         batchEvents[_batchId].push(SupplyChainEvent({
             timestamp: block.timestamp,
             location: _farmOrigin,
             status: "Harvested",
             actor: msg.sender,
-            notes: "Initial on-chain registration"
+            notes: "Initial on-chain registration",
+            price: _price
         }));
 
-        emit BatchCreated(_batchId, _cropName, msg.sender);
+        emit BatchCreated(_batchId, _cropName, msg.sender, _price, _quantityGrams);
     }
 
     function addEvent(
         string memory _batchId,
         string memory _location,
         string memory _status,
-        string memory _notes
+        string memory _notes,
+        uint256 _price
     ) external {
         require(batches[_batchId].exists, "Batch does not exist");
 
@@ -69,10 +78,11 @@ contract AgriTraceability {
             location: _location,
             status: _status,
             actor: msg.sender,
-            notes: _notes
+            notes: _notes,
+            price: _price
         }));
 
-        emit EventAdded(_batchId, _status, msg.sender);
+        emit EventAdded(_batchId, _status, msg.sender, _price);
     }
 
     function getBatch(string memory _batchId) external view returns (Batch memory) {
