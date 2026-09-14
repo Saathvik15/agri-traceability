@@ -7,6 +7,8 @@ export interface Batch {
   farmOrigin: string;
   harvestTimestamp: number;
   farmer: string;
+  price: number; // farm-gate price, in rupees
+  quantityKg: number; // harvested quantity, in kg
 }
 
 export interface SupplyChainEvent {
@@ -15,6 +17,7 @@ export interface SupplyChainEvent {
   status: string;
   actor: string;
   notes: string;
+  price: number; // price recorded at this stage, in rupees (0 if not set)
 }
 
 export interface BatchDetailsResponse {
@@ -34,7 +37,7 @@ export const fetchBatchDetails = async (batchId: string): Promise<BatchDetailsRe
   return res.json();
 };
 
-export const createBatch = async (data: { batchId: string; cropName: string; farmOrigin: string }) => {
+export const createBatch = async (data: { batchId: string; cropName: string; farmOrigin: string; price: number; quantityKg: number }) => {
   const res = await fetch(`${API_BASE_URL}/batches`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -44,7 +47,7 @@ export const createBatch = async (data: { batchId: string; cropName: string; far
   return res.json();
 };
 
-export const addEvent = async (data: { batchId: string; location: string; status: string; notes: string }) => {
+export const addEvent = async (data: { batchId: string; location: string; status: string; notes: string; price: number }) => {
   const res = await fetch(`${API_BASE_URL}/events`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
