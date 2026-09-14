@@ -284,6 +284,13 @@ const ROLE_LABELS: Record<Role, string> = {
   Consumer: "Consumer",
 };
 
+// A batch is considered rejected once any event's status/notes mention a
+// failed inspection. Once true, the retailer flow stops moving it forward
+// (no "stocked on shelf") — it's rejected, not stored.
+const isFailedInspectionEvent = (e: SupplyChainEvent) =>
+  `${e.status} ${e.notes}`.toLowerCase().includes("fail");
+const batchIsRejected = (events: SupplyChainEvent[]) => events.some(isFailedInspectionEvent);
+
 const LeafOrnament = () => (
   <svg width="34" height="34" viewBox="0 0 34 34" fill="none" style={{ margin: "0 auto" }}>
     <path
@@ -390,6 +397,11 @@ export const App: React.FC = () => {
       case "Distributor":
         return ["Picked Up", "In Transit", "Stored in Cold Storage", "Arrived at Regional Hub"];
       case "Retailer":
+        // Once this batch has failed inspection, it's rejected — it cannot be
+        // stocked, so no further retailer statuses are offered for it.
+        if (selectedBatchId && batchIsRejected(selectedEvents)) {
+          return [];
+        }
         return ["Received at Store", "Quality Inspection Passed", "Quality Inspection Failed", "Stocked on Shelf"];
       default:
         return [];
@@ -402,7 +414,7 @@ export const App: React.FC = () => {
   const getQualityVerdict = (events: SupplyChainEvent[]): "Passed" | "Failed" | "Pending" => {
     for (let i = events.length - 1; i >= 0; i--) {
       const combined = `${events[i].status} ${events[i].notes}`.toLowerCase();
-      if (combined.includes("fail")) return "Failed";
+      if (isFailedInspectionEvent(events[i])) return "Failed";
       if (combined.includes("quality") && combined.includes("pass")) return "Passed";
     }
     return "Pending";
@@ -444,10 +456,8 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const statuses = getAvailableStatuses();
-    if (statuses.length > 0) {
-      setEventStatus(statuses[0]);
-    }
-  }, [role]);
+    setEventStatus(statuses.length > 0 ? statuses[0] : "");
+  }, [role, selectedBatchId, selectedEvents]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -502,7 +512,7 @@ export const App: React.FC = () => {
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBatchId || !eventLocation || !eventNotes) return;
+    if (!selectedBatchId || !eventLocation || !eventNotes || !eventStatus) return;
 
     setSubmitting(true);
     setError("");
@@ -517,7 +527,11 @@ export const App: React.FC = () => {
         price: Number(eventPrice) || 0,
       });
 
-      setSuccessMsg(`Event logged for ${selectedBatchId}.`);
+      setSuccessMsg(
+        eventStatus === "Quality Inspection Failed"
+          ? `Batch ${selectedBatchId} rejected — quality inspection failed. It will not be stocked.`
+          : `Event logged for ${selectedBatchId}.`
+      );
       setEventLocation("");
       setEventNotes("");
       setEventPrice("");
@@ -528,6 +542,8 @@ export const App: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  const currentBatchRejected = batchIsRejected(selectedEvents);
 
   const priceTrail = selectedEvents.filter((e) => e.price > 0).map((e) => ({ stage: e.status, price: e.price }));
 
@@ -706,7 +722,17 @@ export const App: React.FC = () => {
                 <h3 style={{ marginTop: 0, marginBottom: "1.1rem", color: ROLE_ACCENT[role].base, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.35rem" }}>
                   {selectedBatchId ? `Log an event for ${selectedBatchId}` : "Log a supply chain event"}
                 </h3>
-                {selectedBatchId ? (
+                {selectedBatchId && role === "Retailer" && currentBatchRejected ? (
+                  <div style={{
+                    backgroundColor: palette.errorBg, border: `1px solid ${palette.errorBorder}`,
+                    borderRadius: "8px", padding: "1rem 1.1rem", display: "flex", gap: "0.6rem", alignItems: "flex-start",
+                  }}>
+                    <span style={{ fontSize: "1.1rem" }}>✕</span>
+                    <p style={{ margin: 0, fontSize: "0.9rem", color: palette.errorText, lineHeight: 1.6 }}>
+                      This batch failed quality inspection and has been rejected. It cannot be stocked, so no further retailer actions are available for it.
+                    </p>
+                  </div>
+                ) : selectedBatchId ? (
                   <form onSubmit={handleAddEvent} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     <input className="at-input" type="text" placeholder="Location (e.g. Mumbai Port, Store #14)" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} style={darkInputStyle} />
 
@@ -731,9 +757,15 @@ export const App: React.FC = () => {
                     </div>
                     <button
                       type="submit" disabled={submitting} className="at-btn"
-                      style={{ backgroundColor: ROLE_ACCENT[role].base, color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "0.95rem", marginTop: "0.35rem" }}
+                      style={{
+                        backgroundColor: eventStatus === "Quality Inspection Failed" ? palette.errorBorder : ROLE_ACCENT[role].base,
+                        color: "#fff", padding: "0.85rem", border: "none", borderRadius: "8px", fontWeight: 600,
+                        cursor: "pointer", fontSize: "0.95rem", marginTop: "0.35rem",
+                      }}
                     >
-                      {submitting ? "Sealing event…" : `Log ${ROLE_LABELS[role]} event`}
+                      {submitting
+                        ? (eventStatus === "Quality Inspection Failed" ? "Rejecting batch…" : "Sealing event…")
+                        : (eventStatus === "Quality Inspection Failed" ? "Reject batch" : `Log ${ROLE_LABELS[role]} event`)}
                     </button>
                   </form>
                 ) : (
@@ -862,6 +894,19 @@ export const App: React.FC = () => {
                 <h4 style={{ marginTop: 0, marginBottom: "1rem", paddingBottom: "0.6rem", borderBottom: `1px solid ${palette.panelBorder}`, color: palette.cream, fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: "1.2rem" }}>
                   Journey of {selectedBatchId}
                 </h4>
+
+                {currentBatchRejected && (
+                  <div style={{
+                    backgroundColor: palette.errorBg, border: `1px solid ${palette.errorBorder}`,
+                    borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1.25rem",
+                    display: "flex", alignItems: "center", gap: "0.6rem",
+                  }}>
+                    <span>✕</span>
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: palette.errorText, fontWeight: 600 }}>
+                      Rejected — failed quality inspection. Not stocked for sale.
+                    </p>
+                  </div>
+                )}
 
                 {priceTrail.length > 0 && (
                   <div style={{
