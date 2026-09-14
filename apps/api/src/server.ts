@@ -6,7 +6,26 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// Fetch all registered produce batches from smart contract
+// Prices are stored on-chain as paise (price * 100) and quantities as grams
+// (quantityKg * 1000) since Solidity has no decimals. These helpers convert
+// at the API boundary so the frontend always deals in plain rupees/kg.
+function toPaise(rupees: unknown): bigint {
+  const n = Number(rupees);
+  if (!Number.isFinite(n) || n < 0) return 0n;
+  return BigInt(Math.round(n * 100));
+}
+function toRupees(paise: unknown): number {
+  return Number(paise) / 100;
+}
+function toGrams(kg: unknown): bigint {
+  const n = Number(kg);
+  if (!Number.isFinite(n) || n < 0) return 0n;
+  return BigInt(Math.round(n * 1000));
+}
+function toKg(grams: unknown): number {
+  return Number(grams) / 1000;
+}
+
 // Fetch all registered produce batches from smart contract
 app.get("/api/batches", async (req: Request, res: Response) => {
   try {
@@ -21,6 +40,8 @@ app.get("/api/batches", async (req: Request, res: Response) => {
           farmOrigin: b.farmOrigin,
           harvestTimestamp: Number(b.harvestTimestamp),
           farmer: b.farmer,
+          price: toRupees(b.price),
+          quantityKg: toKg(b.quantityGrams),
         };
       })
     );
@@ -47,6 +68,7 @@ app.get("/api/batches/:id", async (req: Request, res: Response) => {
       status: e.status,
       actor: e.actor,
       notes: e.notes,
+      price: toRupees(e.price),
     }));
 
     res.json({
@@ -56,6 +78,8 @@ app.get("/api/batches/:id", async (req: Request, res: Response) => {
         farmOrigin: batch.farmOrigin,
         harvestTimestamp: Number(batch.harvestTimestamp),
         farmer: batch.farmer,
+        price: toRupees(batch.price),
+        quantityKg: toKg(batch.quantityGrams),
       },
       events,
     });
@@ -64,12 +88,12 @@ app.get("/api/batches/:id", async (req: Request, res: Response) => {
   }
 });
 
-// Register a new produce batch on-chain
+// Register a new produce batch on-chain, including its farm-gate price and quantity
 app.post("/api/batches", async (req: Request, res: Response) => {
   try {
-    const { batchId, cropName, farmOrigin } = req.body;
+    const { batchId, cropName, farmOrigin, price, quantityKg } = req.body;
 
-    const tx = await agriContract.createBatch(batchId, cropName, farmOrigin);
+    const tx = await agriContract.createBatch(batchId, cropName, farmOrigin, toPaise(price), toGrams(quantityKg));
     const receipt = await tx.wait();
 
     res.status(201).json({
@@ -82,12 +106,12 @@ app.post("/api/batches", async (req: Request, res: Response) => {
   }
 });
 
-// Add a supply-chain status update event on-chain
+// Add a supply-chain status update event on-chain, including the price at this stage
 app.post("/api/events", async (req: Request, res: Response) => {
   try {
-    const { batchId, location, status, notes } = req.body;
+    const { batchId, location, status, notes, price } = req.body;
 
-    const tx = await agriContract.addEvent(batchId, location, status, notes);
+    const tx = await agriContract.addEvent(batchId, location, status, notes, toPaise(price));
     const receipt = await tx.wait();
 
     res.status(200).json({
