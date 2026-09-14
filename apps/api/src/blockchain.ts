@@ -7,12 +7,12 @@ const RPC_URL = process.env.RPC_URL || "http://127.0.0.1:8545";
 const PRIVATE_KEY = process.env.PRIVATE_KEY!;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
 
-// Contract ABI matching AgriTraceability.sol
+// Contract ABI matching AgriTraceability.sol (now with price and quantity on batches, price on events)
 const CONTRACT_ABI = [
-  "function createBatch(string _batchId, string _cropName, string _farmOrigin) external",
-  "function addEvent(string _batchId, string _location, string _status, string _notes) external",
-  "function getBatch(string _batchId) external view returns (tuple(string batchId, string cropName, string farmOrigin, uint256 harvestTimestamp, address farmer, bool exists))",
-  "function getBatchEvents(string _batchId) external view returns (tuple(uint256 timestamp, string location, string status, address actor, string notes)[])",
+  "function createBatch(string _batchId, string _cropName, string _farmOrigin, uint256 _price, uint256 _quantityGrams) external",
+  "function addEvent(string _batchId, string _location, string _status, string _notes, uint256 _price) external",
+  "function getBatch(string _batchId) external view returns (tuple(string batchId, string cropName, string farmOrigin, uint256 harvestTimestamp, address farmer, uint256 price, uint256 quantityGrams, bool exists))",
+  "function getBatchEvents(string _batchId) external view returns (tuple(uint256 timestamp, string location, string status, address actor, string notes, uint256 price)[])",
   "function getAllBatchIds() external view returns (string[])"
 ];
 
